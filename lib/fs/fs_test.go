@@ -25,3 +25,9 @@ func TestClearOldBackup(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCompress(t *testing.T) {
+	if err := Compress("d:\\gtp", "d:\\gtp.zip"); err != nil {
+		t.Fatal(err)
+	}
+}
