@@ -15,7 +15,7 @@ type BackupProcess struct {
 	config config.Config
 	date   time.Time
 	tasks  []Task
-	notice.Sender
+	sender notice.Sender
 }
 
 func (b *BackupProcess) Run() {
@@ -42,8 +42,7 @@ func (b *BackupProcess) sendNotification() error {
 			To:       b.config.Email.Recivers,
 			Body:     string(content),
 		}
-
-		return b.Send(letter)
+		return b.sender.Send(letter)
 	} else {
 		return err
 	}
@@ -98,6 +97,7 @@ func (b *BackupProcess) copyBuildInStructToReport(report *render.BackupReport) {
 }
 
 func NewBackupProcess(config config.Config) (*BackupProcess, error) {
+	
 	b := BackupProcess{
 		config: config,
 	}
@@ -109,12 +109,7 @@ func NewBackupProcess(config config.Config) (*BackupProcess, error) {
 	}
 	b.tasks = tasks
 
-	b.Sender = email.NewSmptClient(
-		b.config.Email.User,
-		b.config.Email.Password,
-		b.config.Email.SmtpHost,
-		b.config.Email.SmtpPort)
+	b.sender = config.GetSender()
 
 	return &b, nil
-
 }
