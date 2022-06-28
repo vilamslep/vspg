@@ -103,7 +103,6 @@ func ClearOldBackup(path string, count int) (err error) {
 		sort.Slice(ls, func(i, j int) bool {
 			return ls[i].ModTime().Before(ls[j].ModTime())
 		})
-
 		if len(ls) < count {
 			return err
 		}
