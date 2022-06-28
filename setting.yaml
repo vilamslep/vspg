@@ -1,0 +1,57 @@
+app:
+  folders:
+    templates: path
+    queries: path
+postgres:
+  user: backup_user
+  password: backup_user_secret
+  host: server_host
+  port: 5432
+  data_location: pgdata
+target_folder: 
+  path: tagret_path
+  user: ''
+  password: ''
+utils:
+  dump: \path\to\pg_dump.exe
+  psql: \path\to\psql.exe
+  compress: \path\to\7z.exe
+email:
+  user: mail@mail.net
+  fromName: preview
+  password: mail_password
+  smtp_host: smtp.mail.net
+  smtp_port: 587
+  recivers:
+  - reciver@mail.net
+  letter:
+    subject: Postgres.Backup
+schedules:
+  daily:
+   dbs:
+   - db
+   keep_count: 5
+   # number of days of week. If 0 then everyday. If define a list from 1 to 7 then back up only these days of week 
+   repeat: 
+   - 1
+   - 2
+   - 3
+   - 4
+   - 5
+   kind: 0
+  weekly:
+    dbs:
+    - db
+    keep_count: 4
+    # number of week of year. If 0 then everyweek. If define a list from 1 to 52 then back up only these weeks of years
+    repeat:
+    - 0
+    kind: 1
+  monthly:
+    dbs:
+    - db
+    keep_count: 3
+    # number of month of year. If 0 then everymonth. If define a list from 1 to 12 then back up only these monthes of years
+    repeat: 
+    - 0
+    kind: 2

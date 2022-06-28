@@ -1,18 +1,16 @@
 package email
 
-import(
+import (
 	"testing"
 )
 
 func TestClientConnection(t *testing.T) {
-	user := "USER"
-	password := "HOST"
-	if err := SendEmail(user, password); err != nil {
-		t.Fatal(err)
-	}
+	// user := "mail@mail.net"
+	// password := "secret"
+	// if err := Send(user, password); err != nil {
+	// 	t.Fatal(err)
+	// }
 	// smtp_host := "smtp.yandex.ru"
 	// smtp_port := 587
-
-
 
 }

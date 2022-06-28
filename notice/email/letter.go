@@ -8,15 +8,20 @@ import (
 type Letter struct {
 	Subject string
 	From    string
+	FromName string
 	To      []string
 	Body    string
 }
 
-func (l Letter) BuildHtmlLetter(fromName string) string {
-	return fmt.Sprintf(
-		(header() + from() + to() + subject() + body()), 
-		fromName, l.From, strings.Join(l.To, ";"), l.Subject, l.Body,
+func (l Letter) BuildMessage() ([]byte, error) {
+	body := fmt.Sprintf((header() + 
+		from() + 
+		to() + 
+		subject() + 
+		body()), 
+		l.FromName, l.From, strings.Join(l.To, ";"), l.Subject, l.Body,
 	)
+	return []byte(body), nil
 }
 
 func header() string {
