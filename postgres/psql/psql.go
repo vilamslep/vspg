@@ -2,8 +2,6 @@ package psql
 
 import (
 	"database/sql"
-	"fmt"
-
 	_ "github.com/lib/pq"
 )
 
@@ -12,14 +10,14 @@ type Database struct {
 	OID  string
 }
 
-func Databases(dbsFilter []string) []Database {
+func Databases(dbsFilter []string) ([]Database, error) {
 	connStr := "user=postgres password=123456 dbname=postgres sslmode=disable"
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
-
+	
 	rows, err := db.Query("SELECT datname, oid FROM pg_database WHERE NOT datname IN ('postgres', 'template1', 'template0')")
 	if err != nil {
 		panic(err)
@@ -29,29 +27,14 @@ func Databases(dbsFilter []string) []Database {
 
 	for rows.Next() {
 		db := Database{}
-		err := rows.Scan(&db.Name, &db.OID)
-		if err != nil {
-			fmt.Println(err)
-			continue
+		if err := rows.Scan(&db.Name, &db.OID); err == nil {
+			dbs = append(dbs, db)
+		} else {
+			return nil, err
 		}
-		dbs = append(dbs, db)
 	}
-	for _, p := range dbs {
-		fmt.Println(p.Name, p.OID)
-	}
-
-	return dbs
+	return dbs, nil
 }
-
-// def databases(dbs_filter:list = []) -> list[Database]:
-//     dbs = list()
-//     with closing(config.get_connection(psycopg2.connect,'postgres')) as conn:
-//         with conn.cursor() as cursor:
-//             cursor.execute( txt_custom_databases(dbs_filter) )
-//             fn = lambda x: Database(x[0], x[1])
-//             dbs = list(map( fn, cursor.fetchall() ))
-
-//     return dbs
 
 // def excluded_tables(db: str) -> list[str]:
 //     tables = list()

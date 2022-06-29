@@ -1,6 +1,11 @@
 package backup
 
-import "github.com/vilamslep/psql.maintenance/lib/config"
+import (
+	"github.com/vilamslep/psql.maintenance/lib/config"
+	"github.com/vilamslep/psql.maintenance/lib/fs"
+	"github.com/vilamslep/psql.maintenance/logger"
+	"github.com/vilamslep/psql.maintenance/postgres/psql"
+)
 
 type Task struct{
 	Name string
@@ -9,7 +14,31 @@ type Task struct{
 	KeepCount int
 }
 
-func (t *Task) Run() error {
+func (t *Task) Run(config config.Config) (err error) {
+	var tmpath, rpath string
+	if tmpath, err = fs.TempDir(); err != nil {
+		return err
+	}
+
+	if rpath, err = fs.GetRootDir(config.Folder.Path, t.Name, t.Kind); err != nil {
+		return err
+	}
+	logger.Info()//'temp directory is {tmpath}'
+	logger.Info()//'root path is {rpath}'
+
+	for _, item := range t.Items {
+		logger.Info()//f'start handling \'{item.database.name}\''
+		if err := item.ExecuteBackup(tmpath, rpath); err == nil {
+			logger.Info()//f'finish handling \'{item.database.name}\''
+		} else {
+			logger.Error()//error
+		}
+	}
+
+    logger.Info()//'removing old copies'
+	//kind_path = os.path.dirname(rpath)
+	//fs.clear_old_backup(kind_path, self.keep_count)
+
 	return nil
 }
 
@@ -27,99 +56,81 @@ func (t *Task) CountStatuses() (cerr int, cwarn int, csuc int) {
 	return	
 }
 
-func (t *Task) addNotFoundDatabases() {}
+func NewTask(name string, kind int, dbs []string, keepCount int) (*Task, error){
+	t := Task{
+		Name: name,
+		Kind:  kind,
+		KeepCount: keepCount,
+	}
 
-func NewTask() {}
-
-func CreateTaskBySchedules(conf config.Config) (rs []Task, err error) {
-	return 
+	if dbsInServer, err := psql.Databases(dbs); err == nil {
+		addNotFoundDatabases(dbs, dbsInServer)
+		
+		for _, db := range dbsInServer {
+			item := NewItem(db)
+			t.Items = append(t.Items, item)
+		}
+		
+		return &t, err
+	
+	} else {
+		return nil, err
+	}
 }
 
-// import os
-// from backup.item import BackupItem
-// from configuration import config, ScheduleItem, Periodicity
-// from utils.postgres import databases, Database
-// from typing import List
-// import fs, traceback
-// from loguru import logger
+func addNotFoundDatabases(dbs[]string, dbsInServer []psql.Database) {
+	for _, i := range dbs {
+		found := false
+		for _, j := range dbsInServer {
+			found =  i == j.Name 
+			if found { 
+				break
+			}
+		}
+		if !found {
+			dbsInServer = append(dbsInServer, psql.Database{Name: i})
+		}
+	}	
+}
 
-// class Task:
-//     name:str
-//     kind: Periodicity
-//     items: List[BackupItem]
-//     keep_count:int
+func CreateTaskBySchedules(schedules config.Schedule) ([]Task, error) {
 
-//     def __init__(self, name: str, kind: Periodicity, dbs: list, keep_count: int ) -> None:
-//         self.name = name
-//         self.kind = kind
-//         self.keep_count = keep_count
+	tasks := make([]Task,0,3)
+	if daily, exist, err := createTask(schedules.Daily); err == nil && exist{
+		tasks = append(tasks, daily)
+	} else {
+		return nil, err
+	}
+	
+	if weekly, exist, err := createTask(schedules.Weekly); err == nil && exist {
+		tasks = append(tasks, weekly)
+	} else {
+		return nil, err
+	}
 
-//         dbs_in_server = databases(dbs)
-//         db_as_obs = self.__add_which_not_found(dbs, dbs_in_server)
-        
-//         self.items = []
-//         for db in db_as_obs:
-//             self.items.append(BackupItem(db))
+	if monthly, exist, err := createTask(schedules.Monthly); err == nil && exist{
+		tasks = append(tasks, monthly)
+	} else {
+		return nil, err
+	}
+	return tasks, nil 
+}
 
-//     def __add_which_not_found(self, dbs: list, dbls: list) -> list:
-//         for db in dbs:
-//             rs = list(filter(lambda x: x.name == db, dbls))
-            
-//             if len(rs) == 0:
-//                 dbls.append(Database(db,''))
+func createTask(sch config.ScheduleItem) (t Task, ok bool, err error) {
+	if sch.Empty() {
+		return
+	}
 
-//         return dbls
-        
-//     def execute(self):
-//         tmpath = fs.temp_dir()
-//         rpath = fs.get_root_dir(config.backpath(), self.name, self.kind)
-        
-//         logger.info(f'temp directory is {tmpath}')
-//         logger.info(f'root path is {rpath}')
-                
-//         for item in self.items:
-//             logger.info(f'start handling \'{item.database.name}\'')
+    if sch.NeedToRun(){
+		
+		name := sch.GetKindPrewiew()
+		if t, err := NewTask(name, sch.Kind, sch.Dbs, sch.KeepCount); err == nil {
+			return *t, true, nil
+		} else {
+			return Task{}, false, err
+		}
 
-//             try:
-//                 item.backup(tmpath, rpath)
-//             except:
-//                 logger.error(traceback.format_exc())
-//             else:        
-//                 logger.info(f'finish handling \'{item.database.name}\'')     
-        
-//         logger.info('removing old copies')
-//         try:
-//             kind_path = os.path.dirname(rpath)
-//             fs.clear_old_backup(kind_path, self.keep_count)
-//         except:
-//             logger.error(traceback.format_exc())
-//         else:
-//             logger.info('success')
-
-
-// def new_task(schedule: ScheduleItem) -> Task|None:
-//     if schedule == None:
-//         return None
-
-//     if schedule.need_to_run():
-//         name = schedule.get_kind_preview()
-//         kind = schedule.kind
-//         keep_count = schedule.keep_count
-//         dbs = schedule.dbs
-//         return Task(name, kind, dbs, keep_count)
-//     else:
-//         return None 
-
-// def generate_task_by_schedules():
-//     schedules = config.get_schedules()
-
-//     tasks = [
-//         new_task(schedules.daily),
-//         new_task(schedules.weekly),
-//         new_task(schedules.monthly)
-//         ]
-
-//     return list( filter(lambda x: x != None, tasks) )
-
-
-
+	} else {
+		return
+	}
+}

@@ -17,7 +17,9 @@ type Item struct {
 	Details      string
 }
 
-func (i *Item) ExecuteBackup() {}
+func (i *Item) ExecuteBackup(tempDir string, targetDir string) (err error) {
+	return nil
+}
 
 func (i *Item) backup() {}
 
@@ -32,6 +34,10 @@ func (i *Item) findErrorInDumpLog() {}
 func (i *Item) unloadBinaryTable() {}
 
 func (i *Item) writeRestoreFile() {}
+
+func NewItem(db psql.Database) Item {
+	return Item{}
+}
 
 // from datetime import datetime
 // from os.path import basename

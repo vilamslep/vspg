@@ -22,7 +22,7 @@ func getKindPrewiew(kind int) string {
 type Schedule struct {
 	Daily  ScheduleItem `yaml:"daily"`
 	Weekly ScheduleItem `yaml:"weekly"`
-	Month  ScheduleItem `yaml:"monthly"`
+	Monthly  ScheduleItem `yaml:"monthly"`
 }
 
 type ScheduleItem struct {
@@ -30,6 +30,10 @@ type ScheduleItem struct {
 	KeepCount int `yaml:"keep_count"`
 	Repeat    []int `yaml:"repeat"`
 	Kind      int
+}
+
+func (si ScheduleItem) Empty() bool {
+	return false
 }
 
 //TODO
