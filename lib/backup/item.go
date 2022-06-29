@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/vilamslep/psql.maintenance/lib/config"
 	"github.com/vilamslep/psql.maintenance/lib/fs"
+	"github.com/vilamslep/psql.maintenance/logger"
 	"github.com/vilamslep/psql.maintenance/postgres/pgdump"
 	"github.com/vilamslep/psql.maintenance/postgres/psql"
+	"github.com/vilamslep/psql.maintenance/render"
 )
 
 type RestoreConfig struct {
@@ -23,7 +26,7 @@ type RestoreConfig struct {
 
 type Item struct {
 	psql.Database
-	Status       string
+	Status       int
 	StartTime    time.Time
 	FinishTime   time.Time
 	DatabaseSize int64
@@ -34,101 +37,117 @@ type Item struct {
 }
 
 func (i *Item) ExecuteBackup(tempDir string, targetDir string) (err error) {
-	//         if len(self.database.oid) == 0:
-	//             self.status = 'warning'
-	//             self.details = 'oid is empty. Database isn\'t found in server'
-	//             return
-	//         self.start_time = datetime.now()
-	//         self.__set_db_size()
-	//         self.details = ''
-	//         try:
-	//             self.__backup(tempdir, targetdir)
-	//         except Exception:
-	//             exc_info = sys.exc_info()
+	if i.OID == 0 {
+		i.Status = render.StatusWarning
+		i.Details = "oid is empty. Database isn't found in server"
+	
+		return nil
+	}
 
-	//             self.details = exc_info[1]
-	//             self.status = 'error'
-	//             self.end_time = datetime.now()
-
-	//             raise Exception(f'backup of {self.database.name} is failed').with_traceback(exc_info[2])
-
-	//         self.status = 'success'
-	//         self.end_time = datetime.now()
-
-	return nil
+	i.StartTime = time.Now()
+	i.setDatabaseSize()
+	
+	err = i.backup(tempDir, targetDir); 
+	
+	if err != nil {
+		i.Details = err.Error()
+		i.Status = render.StatusError
+	} else {
+		i.Status = render.StatusSuccess
+	}
+	i.FinishTime = time.Now()
+	
+	return err
 }
 
 func (i *Item) backup(tempDir string, targetDir string) (err error) {
-	//         logger.info('checking space in template directory')
+	logger.Debug()//'checking space in template directory'
 
-	//         if not self.__check_space_for_backup(tempdir):
-	//             raise Exception(f'there isn\'t enought space in disk. checking path is {tempdir}')
+	if ok, err := i.checkSpace(tempDir); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("%s doesn't have enough space. Db %s. Size %d", tempDir, i.Name, i.DatabaseSize)
+	} else {
+		logger.Debug()//"success"
+	}
+	
+	logger.Debug()//'checking space in target directory'
+	if ok, err := i.checkSpace(targetDir); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("%s doesn't have enough space. Db %s. Size %d", targetDir, i.Name, i.DatabaseSize)
+	} else {
+		logger.Debug()//"success"
+	}
+	chdir := make([]string,0,2)
+	chdir = append(chdir, "logical")	
+	excludeTabls, err := psql.ExcludedTables(i.Name)
+	if err != nil {
+		return err
+	}
 
-	//         logger.info('success')
-	//         logger.info('checking space in target directory')
-	//         if not self.__check_space_for_backup(targetdir):
-	//             raise Exception(f'there isn\'t enought space in disk. checking path is {targetdir}')
+	if len(excludeTabls) > 0 {
+		logger.Debug()//'excluded tables are ' + ','.join(exclude_tabls)
+		chdir = append(chdir, "binary")
+	}
+	
+	locations, err := fs.CreateDirectories(tempDir, i.Name, chdir)
+	if err != nil {
+		return err
+	}
+	logger.Debug()//start dumping
+	if err := i.dump(locations["logical"], excludeTabls); err != nil {
+		return err
+	} 
+	logger.Debug()//'success'
 
-	//         logger.info('success')
+	if len(excludeTabls) > 0 {
+		logger.Debug()//uploading binary data
+		if biniriesFiles, err := i.unloadBinaryTable(locations["binary"], excludeTabls); err == nil {
+			err := i.writeRestoreFile(locations["main"], biniriesFiles);
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	pathBackDb := locations["main"]
+	archive := fmt.Sprintf("%s.zip", pathBackDb)
+	logger.Debug()//"compressing"
+	if err := fs.Compress(pathBackDb, archive); err != nil {
+		return err
+	}
+    logger.Debug()//'success'
 
-	//         chdir = ['logical']
+	logger.Debug()//'coping backup to target directory'
+	dstName := filepath.Base(filepath.Dir(archive)) 
+	i.BackupPath = fmt.Sprintf("%s\\%s", targetDir, dstName)
+	if err := fs.CopyFile(archive, i.BackupPath); err == nil {
+		i.BackupSize, err = fs.GetSize(i.BackupPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		return err
+	}
 
-	//         exclude_tabls = excluded_tables(self.database.name)
-
-	//         if len(exclude_tabls) > 0:
-	//             logger.info('excluded tables are ' + ','.join(exclude_tabls))
-	//             chdir.append('binary')
-
-	//         try:
-	//             locations = fs.generate_directories(tempdir, self.database.name, chdir)
-	//         except:
-	//             trace = sys.exc_info()[2]
-	//             raise Exception('generating of directories end with error').with_traceback(trace)
-
-	//         logger.info('dumping...')
-	//         self.__dump(locations['logical'], exclude_tabls)
-	//         logger.info('success')
-
-	//         if len(exclude_tabls) > 0:
-	//             logger.info('uploading binary data')
-	//             binaries_files = self.__unload_as_binary(locations['binary'], exclude_tabls)
-	//             self.__write_restore_file(locations['main'], binaries_files)
-	//             logger.info('success')
-
-	//         path_back_db = locations['main']
-	//         archive = f'{path_back_db}.zip'
-
-	//         logger.info('compressing...')
-	//         if not compress_dir(path_back_db, archive):
-	//             raise Exception('compressing is not success')
-	//         logger.info('success')
-
-	//         logger.info('coping backup to target directory')
-	//         try:
-	//             dst_name = basename(archive)
-	//             self.backup_path = f'{targetdir}\\{dst_name}'
-	//             fs.copy_file(archive, self.backup_path)
-	//             self.size_backup = fs.get_size(self.backup_path)
-	//         except:
-	//             trace = sys.exc_info()[2]
-	//             raise Exception('can\'t copy the backup to target directory').with_traceback(trace)
-	//         logger.info('success')
-
-	//         logger.info('removing temp files')
-	//         try:
-	//             fs.remove(path_back_db)
-	//             fs.remove(archive)
-	//         except:
-	//             trace = sys.exc_info()[2]
-	//             raise Exception(f'removing is not success').with_traceback(trace)
-	//         logger.info('success')
+	logger.Debug()//'success'
+	logger.Debug()//'removing temp files'
+	if err := fs.Remove(pathBackDb); err != nil {
+		return err
+	}
+	if err := fs.Remove(archive); err != nil {
+		return err
+	}
+	logger.Debug()//'success'
 
 	return nil
 }
 
 func (i *Item) checkSpace(path string) (bool, error) {
 	dbStora := fmt.Sprintf("%s\\base\\%s", DatabaseLocation, i.OID)
-	return fs.IsEnoughSpace(dbStora, path)
+	return fs.IsEnoughSpace(dbStora, path, i.BackupSize)
 }
 
 func (i *Item) setDatabaseSize() error {

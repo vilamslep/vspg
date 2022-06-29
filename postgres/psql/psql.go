@@ -8,7 +8,7 @@ import (
 
 type Database struct {
 	Name string
-	OID  string
+	OID  int
 }
 
 func Databases(dbsFilter []string) ([]Database, error) {
@@ -37,12 +37,14 @@ func Databases(dbsFilter []string) ([]Database, error) {
 	return dbs, nil
 }
 
-// def excluded_tables(db: str) -> list[str]:
-//     tables = list()
-//     with closing(config.get_connection(psycopg2.connect,db)) as conn:
-//         with conn.cursor() as cursor:
-//             cursor.execute( txt_stat_tables() )
-//             tables = [item[0] for item in cursor.fetchall() ]
+func ExcludedTables(db string) ([]string, error) {
+	return make([]string,0), nil
+	//     tables = list()
+	//     with closing(config.get_connection(psycopg2.connect,db)) as conn:
+	//         with conn.cursor() as cursor:
+	//             cursor.execute( txt_stat_tables() )
+	//             tables = [item[0] for item in cursor.fetchall() ]
+}
 
 //     return tables
 

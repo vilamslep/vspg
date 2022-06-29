@@ -13,13 +13,17 @@ import (
 	"github.com/vilamslep/psql.maintenance/lib/config"
 )
 
-func IsEnoughSpace(src string, dst string) (bool, error) {
+func IsEnoughSpace(src string, dst string, size int64) (bool, error) {
 
 	free, err := freeSpace(dst)
 
 	if err != nil {
 		return false, err
 	}
+
+	if size > 0 {
+		return free > size, err
+	} 
 
 	used, err := GetSize(src)
 
