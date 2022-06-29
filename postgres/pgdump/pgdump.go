@@ -1,30 +1,29 @@
 package pgdump
 
-// import subprocess
-// from configuration import config
+func Dump(db string, dst string, output string, excludeTables []string) error {
+	//     tool = config.pg_dump()
 
-// def dump(db: str, dst: str, output:str='', excluded_data: list=[]) -> bool:
-//     tool = config.pg_dump()
-    
-//     args = [ tool, '--format', 'directory', '--no-password','--jobs', '4', 
-//     '--blobs', '--encoding', 'UTF8', '--verbose','--file', dst, '--dbname', db]
+	//     args = [ tool, '--format', 'directory', '--no-password','--jobs', '4',
+	//     '--blobs', '--encoding', 'UTF8', '--verbose','--file', dst, '--dbname', db]
 
-//     args = excluding_args(args, excluded_data)
-    
-//     if output == '':
-//         output = subprocess.PIPE
+	//     args = excluding_args(args, excluded_data)
 
-//     ps = subprocess.Popen(args, stdout=output, stderr=output)
-//     exit_code = ps.wait()
+	//     if output == '':
+	//         output = subprocess.PIPE
 
-//     if int(exit_code) != 0:
-//         return False, f'Dumping failed. Return code : {exit_code}'
+	//     ps = subprocess.Popen(args, stdout=output, stderr=output)
+	//     exit_code = ps.wait()
 
-//     return True, ''
+	//     if int(exit_code) != 0:
+	//         return False, f'Dumping failed. Return code : {exit_code}'
 
-// def excluding_args(args:list, excluded_data:list)->list:
-//     for tb in excluded_data:
-//         args.append('--exclude-table-data')
-//         args.append(tb)
+	//     return True, ''
 
-//     return args
+	// def excluding_args(args:list, excluded_data:list)->list:
+	//     for tb in excluded_data:
+	//         args.append('--exclude-table-data')
+	//         args.append(tb)
+
+	//     return args
+	return nil
+}

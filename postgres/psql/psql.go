@@ -2,6 +2,7 @@ package psql
 
 import (
 	"database/sql"
+
 	_ "github.com/lib/pq"
 )
 
@@ -17,7 +18,7 @@ func Databases(dbsFilter []string) ([]Database, error) {
 		panic(err)
 	}
 	defer db.Close()
-	
+
 	rows, err := db.Query("SELECT datname, oid FROM pg_database WHERE NOT datname IN ('postgres', 'template1', 'template0')")
 	if err != nil {
 		panic(err)
@@ -45,37 +46,31 @@ func Databases(dbsFilter []string) ([]Database, error) {
 
 //     return tables
 
+func CopyBinary(db string, src string, dst string) (err error) {
+	//     tool = config.psql()
+
+	//     args = [tool, '--dbname', db]
+
+	//         path_save = __prepare_path(dst)
+
+	//         cmd = ["COPY", src, "TO", path_save, "WITH BINARY;"]
+	//         return __execute(args, " ".join(cmd)) == 0
+
+	//     def __prepare_path(path:str)->str:
+	//         npath = path.replace("\\", "\\\\")
+	//         return f'\'{npath}\''
+
+	//     def __execute(args:list, command:str)->int:
+	//         args.append('--command')
+	//         args.append(command)
+
+	//         exit_code = subprocess.Popen(args, stdout=subprocess.PIPE).wait()
+	//         return int(exit_code)
+
+	return
+}
+
 // def copy_binary(db:str, src:str, dst:str)->dict:
-
-//     tool = config.psql()
-
-//     args = [tool, '--dbname', db]
-
-//     def __from()->bool:
-//         path_from = __prepare_path(src)
-
-//         cmd = ["COPY", dst, "TO", path_from, "WITH BINARY;"]
-
-//         return __execute(args, " ".join(cmd)) == 0
-
-//     def __to()->bool:
-//         path_save = __prepare_path(dst)
-
-//         cmd = ["COPY", src, "TO", path_save, "WITH BINARY;"]
-//         return __execute(args, " ".join(cmd)) == 0
-
-//     def __prepare_path(path:str)->str:
-//         npath = path.replace("\\", "\\\\")
-//         return f'\'{npath}\''
-
-//     def __execute(args:list, command:str)->int:
-//         args.append('--command')
-//         args.append(command)
-
-//         exit_code = subprocess.Popen(args, stdout=subprocess.PIPE).wait()
-//         return int(exit_code)
-
-//     return {"from":__from, "to": __to}
 
 // def txt_custom_databases(dbs:list)->str:
 //     if len(dbs) > 0:

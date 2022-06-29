@@ -11,6 +11,11 @@ import (
 	"github.com/vilamslep/psql.maintenance/render"
 )
 
+var(
+	DatabaseLocation string
+	LogsErrors []string
+)
+
 type BackupProcess struct {
 	config config.Config
 	date   time.Time
@@ -23,7 +28,7 @@ func (b *BackupProcess) Run() {
 
 	for _, t := range b.tasks {
 		logger.Info() //handling of kind v.kind
-		if err := t.Run(); err != nil {
+		if err := t.Run(b.config); err != nil {
 			logger.Error() //error
 		}
 	}
@@ -102,8 +107,13 @@ func NewBackupProcess(config config.Config) (*BackupProcess, error) {
 		config: config,
 	}
 
+	DatabaseLocation = config.Postgres.DataLocation
+	LogsErrors = make([]string, 0, 2)
+	LogsErrors = append(LogsErrors, "pg_dump: ошибка:")
+	LogsErrors = append(LogsErrors, "pg_dump: error:")
+
 	b.date = time.Now()
-	tasks, err := CreateTaskBySchedules(config)
+	tasks, err := CreateTaskBySchedules(config.Schedule)
 	if err != nil {
 		logger.Error() //error
 	}
