@@ -1,29 +1,41 @@
 package pgdump
 
-func Dump(db string, dst string, output string, excludeTables []string) error {
-	//     tool = config.pg_dump()
+import (
+	"fmt"
+	"io"
+	"os/exec"
+	"syscall"
+)
+var(
+	PGDump string
+)
 
-	//     args = [ tool, '--format', 'directory', '--no-password','--jobs', '4',
-	//     '--blobs', '--encoding', 'UTF8', '--verbose','--file', dst, '--dbname', db]
+func Dump(db string, dst string, output io.Writer, excludedTables []string) error {
 
-	//     args = excluding_args(args, excluded_data)
+	cmd := exec.Command(PGDump, "--format", "directory", "--no-password","--jobs", "4",
+		"--blobs", "--encoding", "UTF8", "--verbose","--file", dst, "--dbname", db)
+	excludingArgs(cmd, excludedTables)
 
-	//     if output == '':
-	//         output = subprocess.PIPE
-
-	//     ps = subprocess.Popen(args, stdout=output, stderr=output)
-	//     exit_code = ps.wait()
-
-	//     if int(exit_code) != 0:
-	//         return False, f'Dumping failed. Return code : {exit_code}'
-
-	//     return True, ''
-
-	// def excluding_args(args:list, excluded_data:list)->list:
-	//     for tb in excluded_data:
-	//         args.append('--exclude-table-data')
-	//         args.append(tb)
-
-	//     return args
+	if err := cmd.Start(); err != nil {
+        return err
+    }
+	cmd.Stdout = output
+    if err := cmd.Wait(); err != nil {
+        if exiterr, ok := err.(*exec.ExitError); ok {
+            if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+                return fmt.Errorf("Exit Status: %d", status.ExitStatus())
+            }
+        } else {
+            return fmt.Errorf("cmd.Wait: %v", err)
+        }
+    }
 	return nil
 }
+
+func excludingArgs(cmd *exec.Cmd, excludedTable []string) {
+	for _, i := range excludedTable {
+		cmd.Args = append(cmd.Args, "--exclude-table-data")
+		cmd.Args = append(cmd.Args, i)
+	}
+}
+	

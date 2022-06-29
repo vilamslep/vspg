@@ -19,8 +19,8 @@ func TestRenderReport(t *testing.T) {
 	item.DatabaseSize = "454GB"
 	item.StartTime = "23:30"
 	item.FinishTime = "23:50"
-	item.OID = "123456"
-	item.Status = "success"
+	item.OID = 23456
+	item.Status = StatusSuccess
 	item.Details = ""
 
 	item1 := Item{}
@@ -30,8 +30,8 @@ func TestRenderReport(t *testing.T) {
 	item1.DatabaseSize = "454GB"
 	item1.StartTime = "23:30"
 	item1.FinishTime = "23:50"
-	item1.OID = "123456"
-	item1.Status = "error"
+	item1.OID = 123456
+	item1.Status = StatusError
 	item1.Details = ""
 
 	task := Task{}

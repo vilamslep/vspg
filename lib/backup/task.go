@@ -5,6 +5,7 @@ import (
 	"github.com/vilamslep/psql.maintenance/lib/fs"
 	"github.com/vilamslep/psql.maintenance/logger"
 	"github.com/vilamslep/psql.maintenance/postgres/psql"
+	"github.com/vilamslep/psql.maintenance/render"
 )
 
 type Task struct{
@@ -45,9 +46,9 @@ func (t *Task) Run(config config.Config) (err error) {
 func (t *Task) CountStatuses() (cerr int, cwarn int, csuc int) {
 	for _, i := range t.Items {
 		switch i.Status {
-		case "error":
+		case render.StatusError:
 			cerr +=1
-		case "success":
+		case render.StatusSuccess:
 			csuc +=1
 		default:
 			cwarn +=1
@@ -63,7 +64,7 @@ func NewTask(name string, kind int, dbs []string, keepCount int) (*Task, error){
 		KeepCount: keepCount,
 	}
 
-	if dbsInServer, err := psql.Databases(dbs); err == nil {
+	if dbsInServer, err := psql.Databases(PGConnectionConfig, dbs); err == nil {
 		addNotFoundDatabases(dbs, dbsInServer)
 		
 		for _, db := range dbsInServer {

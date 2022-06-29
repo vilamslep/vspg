@@ -81,7 +81,9 @@ func (i *Item) backup(tempDir string, targetDir string) (err error) {
 	}
 	chdir := make([]string,0,2)
 	chdir = append(chdir, "logical")	
-	excludeTabls, err := psql.ExcludedTables(i.Name)
+	nc := PGConnectionConfig
+	nc.Database = i.Database
+	excludeTabls, err := psql.ExcludedTables(nc)
 	if err != nil {
 		return err
 	}
@@ -146,12 +148,12 @@ func (i *Item) backup(tempDir string, targetDir string) (err error) {
 }
 
 func (i *Item) checkSpace(path string) (bool, error) {
-	dbStora := fmt.Sprintf("%s\\base\\%s", DatabaseLocation, i.OID)
+	dbStora := fmt.Sprintf("%s\\base\\%d", DatabaseLocation, i.OID)
 	return fs.IsEnoughSpace(dbStora, path, i.BackupSize)
 }
 
 func (i *Item) setDatabaseSize() error {
-	dbStora := fmt.Sprintf("%s\\base\\%s", DatabaseLocation, i.OID)
+	dbStora := fmt.Sprintf("%s\\base\\%d", DatabaseLocation, i.OID)
 	if c, err := fs.GetSize(dbStora); err == nil {
 		i.DatabaseSize = c
 	} else {
@@ -166,9 +168,8 @@ func (i *Item) dump(lpath string, excludeTabls []string) error {
 	if err != nil {
 		return err
 	}
-	out.Close()
 
-	err = pgdump.Dump(i.Name, lpath, fout, excludeTabls)
+	err = pgdump.Dump(i.Name, lpath, out, excludeTabls)
 	if err != nil {
 		return err
 	}

@@ -2,8 +2,13 @@ package psql
 
 import (
 	"database/sql"
+	"fmt"
+	"os/exec"
+	"strings"
+	"syscall"
 
 	_ "github.com/lib/pq"
+	"github.com/vilamslep/psql.maintenance/logger"
 )
 
 type Database struct {
@@ -11,17 +16,47 @@ type Database struct {
 	OID  int
 }
 
-func Databases(dbsFilter []string) ([]Database, error) {
-	connStr := "user=postgres password=123456 dbname=postgres sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
+type ConnectionConfig struct {
+	User string
+	Password string
+	Database
+	SSlMode bool
+}
+
+func (c ConnectionConfig) String() string {
+	var mode string 
+	if c.SSlMode {
+		mode = "enable"
+	} else {
+		mode = "disable"
+	}
+	return fmt.Sprintf("user=%s password=%s dbname=%s sslmode=%s", c.User, c.Password, c.Name, mode)
+}
+
+var (
+	AllDatabasesTxt string
+	LargeTablesTxt string
+	SearchDatabases string 
+	PsqlExe string
+)
+//TODO I have to just define query args witout replacing substring in the query text 
+func Databases(pgConf ConnectionConfig,  dbsFilter []string) ([]Database, error) {
+	
+	db, err := createConnection(pgConf)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer db.Close()
+	var txt string
+	if len(dbsFilter) > 0 {
+		txt = strings.ReplaceAll(SearchDatabases, "$1", strings.Join(dbsFilter, ","))
+	} else {
+		txt = AllDatabasesTxt
+	}
 
-	rows, err := db.Query("SELECT datname, oid FROM pg_database WHERE NOT datname IN ('postgres', 'template1', 'template0')")
+	rows, err := db.Query(txt)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	defer rows.Close()
 	dbs := []Database{}
@@ -37,60 +72,64 @@ func Databases(dbsFilter []string) ([]Database, error) {
 	return dbs, nil
 }
 
-func ExcludedTables(db string) ([]string, error) {
-	return make([]string,0), nil
-	//     tables = list()
-	//     with closing(config.get_connection(psycopg2.connect,db)) as conn:
-	//         with conn.cursor() as cursor:
-	//             cursor.execute( txt_stat_tables() )
-	//             tables = [item[0] for item in cursor.fetchall() ]
+
+func ExcludedTables(pgConf ConnectionConfig) ([]string, error) {
+	db, err := createConnection(pgConf)
+	if err != nil {
+		return nil, err
+	}
+	defer db.Close()
+	rows, err := db.Query(LargeTablesTxt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	tables := make([]string,0,0)
+
+	for rows.Next() {
+		var table string
+		if err := rows.Scan(&table); err == nil {
+			tables = append(tables, table)
+		} else {
+			return nil, err
+		}
+	}
+	return tables, nil
 }
 
-//     return tables
+func createConnection(pgConf ConnectionConfig) (*sql.DB, error) {
+	db, err := sql.Open("postgres", pgConf.String())
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+        if r := recover(); r != nil {
+            logger.Error()//"Panic. Recovered in f", r
+			fmt.Println("Panic. Recovered in f", r)
+        }
+    }()
+	
+	if err := db.Ping(); err != nil {
+		return nil, err
+	}
+	return db, nil
+}
 
 func CopyBinary(db string, src string, dst string) (err error) {
-	//     tool = config.psql()
+	cmd := exec.Command(PsqlExe, "--dbname", db, "COPY" , src, "TO", dst, "WITH_BINARY")
+	
+	if err := cmd.Start(); err != nil {
+        return err
+    }
 
-	//     args = [tool, '--dbname', db]
-
-	//         path_save = __prepare_path(dst)
-
-	//         cmd = ["COPY", src, "TO", path_save, "WITH BINARY;"]
-	//         return __execute(args, " ".join(cmd)) == 0
-
-	//     def __prepare_path(path:str)->str:
-	//         npath = path.replace("\\", "\\\\")
-	//         return f'\'{npath}\''
-
-	//     def __execute(args:list, command:str)->int:
-	//         args.append('--command')
-	//         args.append(command)
-
-	//         exit_code = subprocess.Popen(args, stdout=subprocess.PIPE).wait()
-	//         return int(exit_code)
-
-	return
+    if err := cmd.Wait(); err != nil {
+        if exiterr, ok := err.(*exec.ExitError); ok {
+            if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+                return fmt.Errorf("Exit Status: %d", status.ExitStatus())
+            }
+        } else {
+            return fmt.Errorf("cmd.Wait: %v", err)
+        }
+    }
+	return err
 }
-
-// def copy_binary(db:str, src:str, dst:str)->dict:
-
-// def txt_custom_databases(dbs:list)->str:
-//     if len(dbs) > 0:
-//         txtdb = ','.join(list(map(lambda x: f'\'{x}\'',dbs)))
-//         filter = f'WHERE datname IN( {txtdb} )'
-//     else:
-//         filter = 'WHERE NOT datname IN (\'postgres\', \'template1\', \'template0\')'
-
-//     return 'SELECT datname, oid FROM pg_database {};'.format(filter)
-
-// def txt_stat_tables() -> str:
-//     '''select tables which are bigger that 4 GB'''
-//     return '''
-//     SELECT table_name as name
-//     FROM (
-// 	    SELECT table_name,pg_total_relation_size(table_name) AS total_size
-// 	    FROM (
-// 		    SELECT (table_schema || '.' || table_name) AS table_name
-//             FROM information_schema.tables) AS all_tables
-//  	ORDER BY total_size DESC) AS pretty_sizes WHERE total_size > 4294967296;
-//     '''

@@ -8,8 +8,8 @@ const (
 
 type Item struct {
 	Name         string
-	OID          string
-	Status       string
+	OID          int
+	Status       int
 	StartTime    string
 	FinishTime   string
 	DatabaseSize string

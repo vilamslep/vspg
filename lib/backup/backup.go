@@ -8,12 +8,14 @@ import (
 	"github.com/vilamslep/psql.maintenance/logger"
 	"github.com/vilamslep/psql.maintenance/notice"
 	"github.com/vilamslep/psql.maintenance/notice/email"
+	"github.com/vilamslep/psql.maintenance/postgres/psql"
 	"github.com/vilamslep/psql.maintenance/render"
 )
 
 var(
 	DatabaseLocation string
 	LogsErrors []string
+	PGConnectionConfig psql.ConnectionConfig
 )
 
 type BackupProcess struct {
@@ -92,8 +94,8 @@ func (b *BackupProcess) copyBuildInStructToReport(report *render.BackupReport) {
 			ni.FinishTime = i.FinishTime.Format("03:04:05")
 			ni.Status = i.Status
 			ni.BackupPath = i.BackupPath
-			ni.BackupSize = fmt.Sprintf("%.2fGB", (i.BackupSize / 1024 / 1024 / 1024))
-			ni.DatabaseSize = fmt.Sprintf("%.2fGB", (i.DatabaseSize / 1024 / 1024 / 1024))
+			ni.BackupSize = fmt.Sprintf("%.2dGB", (i.BackupSize / 1024 / 1024 / 1024))
+			ni.DatabaseSize = fmt.Sprintf("%.2dGB", (i.DatabaseSize / 1024 / 1024 / 1024))
 			ni.Details = i.Details
 
 			nt.Items = append(nt.Items, ni)

@@ -15,7 +15,7 @@ func TestGetSize(t *testing.T) {
 }
 
 func TestIsEnoughSpace(t *testing.T) {
-	if _, err := IsEnoughSpace("d:\\gtp", "c:\\"); err != nil {
+	if _, err := IsEnoughSpace("d:\\gtp", "c:\\", 0); err != nil {
 		t.Fatal(err)
 	}
 }
