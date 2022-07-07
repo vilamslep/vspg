@@ -1,35 +1,39 @@
 package pgdump
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"os/exec"
 	"syscall"
 )
-var(
-	PGDump string
+
+var (
+	PGDumpExe string
 )
 
-func Dump(db string, dst string, output io.Writer, excludedTables []string) error {
+func Dump(db string, dst string, excludedTables []string) (stdout bytes.Buffer, stderr bytes.Buffer, err error) {
 
-	cmd := exec.Command(PGDump, "--format", "directory", "--no-password","--jobs", "4",
-		"--blobs", "--encoding", "UTF8", "--verbose","--file", dst, "--dbname", db)
+	cmd := exec.Command(PGDumpExe, "--format", "directory", "--no-password", "--jobs", "4",
+		"--blobs", "--encoding", "UTF8", "--verbose", "--file", dst, "--dbname", db)
 	excludingArgs(cmd, excludedTables)
 
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+
 	if err := cmd.Start(); err != nil {
-        return err
-    }
-	cmd.Stdout = output
-    if err := cmd.Wait(); err != nil {
-        if exiterr, ok := err.(*exec.ExitError); ok {
-            if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-                return fmt.Errorf("Exit Status: %d", status.ExitStatus())
-            }
-        } else {
-            return fmt.Errorf("cmd.Wait: %v", err)
-        }
-    }
-	return nil
+		return stdout, stderr, err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				return stdout, stderr, fmt.Errorf("Exit Status: %d", status.ExitStatus())
+			}
+		} else {
+			return stdout, stderr, fmt.Errorf("cmd.Wait: %v", err)
+		}
+	}
+	return stdout, stderr, nil
 }
 
 func excludingArgs(cmd *exec.Cmd, excludedTable []string) {
@@ -38,4 +42,3 @@ func excludingArgs(cmd *exec.Cmd, excludedTable []string) {
 		cmd.Args = append(cmd.Args, i)
 	}
 }
-	

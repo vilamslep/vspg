@@ -2,6 +2,7 @@ package render
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 )
 
@@ -11,8 +12,8 @@ const (
 	StatusError   = 2
 )
 
-func RenderReport(report BackupReport) (content []byte, err error) {
-	tmpl, err := template.ParseFiles("report.html")
+func RenderReport(report BackupReport, templatesPath string) (content []byte, err error) {
+	tmpl, err := template.ParseFiles(fmt.Sprintf("%s\\%s", templatesPath, "report.html"))
 
 	if err != nil {
 		return content, err

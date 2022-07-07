@@ -1,11 +1,5 @@
 package render
 
-const (
-	Error   = -1
-	Success = 0
-	Warning = 1
-)
-
 type Item struct {
 	Name         string
 	OID          int

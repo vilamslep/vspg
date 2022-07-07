@@ -1,6 +1,9 @@
 package backup
 
 import (
+	"path/filepath"
+	"time"
+
 	"github.com/vilamslep/psql.maintenance/lib/config"
 	"github.com/vilamslep/psql.maintenance/lib/fs"
 	"github.com/vilamslep/psql.maintenance/logger"
@@ -11,7 +14,7 @@ import (
 type Task struct{
 	Name string
 	Kind int
-	Items []Item
+	Items []*Item
 	KeepCount int
 }
 
@@ -24,21 +27,23 @@ func (t *Task) Run(config config.Config) (err error) {
 	if rpath, err = fs.GetRootDir(config.Folder.Path, t.Name, t.Kind); err != nil {
 		return err
 	}
-	logger.Info()//'temp directory is {tmpath}'
-	logger.Info()//'root path is {rpath}'
+	logger.Infof("temp directory is %s", tmpath)
+	logger.Infof("root directory is %s", tmpath)
 
 	for _, item := range t.Items {
-		logger.Info()//f'start handling \'{item.database.name}\''
+		logger.Infof("start handlind %s", item.Database.Name)
 		if err := item.ExecuteBackup(tmpath, rpath); err == nil {
-			logger.Info()//f'finish handling \'{item.database.name}\''
+			logger.Info("finish handling %s", item.Database.Name)
 		} else {
-			logger.Error()//error
+			logger.Errorf("handling database '%s' is failed. %v", item.Database.Name, err )
 		}
 	}
 
-    logger.Info()//'removing old copies'
-	//kind_path = os.path.dirname(rpath)
-	//fs.clear_old_backup(kind_path, self.keep_count)
+    logger.Info("removing old copies")
+	
+	if err := fs.ClearOldBackup(filepath.Dir(rpath), t.KeepCount); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -69,7 +74,7 @@ func NewTask(name string, kind int, dbs []string, keepCount int) (*Task, error){
 		
 		for _, db := range dbsInServer {
 			item := NewItem(db)
-			t.Items = append(t.Items, item)
+			t.Items = append(t.Items, &item)
 		}
 		
 		return &t, err
@@ -97,20 +102,27 @@ func addNotFoundDatabases(dbs[]string, dbsInServer []psql.Database) {
 func CreateTaskBySchedules(schedules config.Schedule) ([]Task, error) {
 
 	tasks := make([]Task,0,3)
-	if daily, exist, err := createTask(schedules.Daily); err == nil && exist{
-		tasks = append(tasks, daily)
+	if daily, exist, err := createTask(schedules.Daily); err == nil{
+		if  exist {
+			tasks = append(tasks, daily)
+		}
 	} else {
 		return nil, err
 	}
 	
-	if weekly, exist, err := createTask(schedules.Weekly); err == nil && exist {
-		tasks = append(tasks, weekly)
+	if weekly, exist, err := createTask(schedules.Weekly); err == nil {
+		if  exist {
+			tasks = append(tasks, weekly)
+		}
+		
 	} else {
 		return nil, err
 	}
 
-	if monthly, exist, err := createTask(schedules.Monthly); err == nil && exist{
-		tasks = append(tasks, monthly)
+	if monthly, exist, err := createTask(schedules.Monthly); err == nil{
+		if exist {
+			tasks = append(tasks, monthly)
+		}
 	} else {
 		return nil, err
 	}
@@ -121,10 +133,11 @@ func createTask(sch config.ScheduleItem) (t Task, ok bool, err error) {
 	if sch.Empty() {
 		return
 	}
+	sch.Today = time.Now()
 
     if sch.NeedToRun(){
 		
-		name := sch.GetKindPrewiew()
+		name := config.GetKindPrewiew(sch.Kind)
 		if t, err := NewTask(name, sch.Kind, sch.Dbs, sch.KeepCount); err == nil {
 			return *t, true, nil
 		} else {

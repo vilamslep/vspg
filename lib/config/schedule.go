@@ -1,12 +1,14 @@
 package config
 
+import "time"
+
 const (
 	DAILY = iota
 	WEEKLY
 	MONTHLY
 )
 
-func getKindPrewiew(kind int) string {
+func GetKindPrewiew(kind int) string {
 	switch kind {
 	case 0:
 		return "Daily"
@@ -20,16 +22,19 @@ func getKindPrewiew(kind int) string {
 }
 
 type Schedule struct {
-	Daily  ScheduleItem `yaml:"daily"`
-	Weekly ScheduleItem `yaml:"weekly"`
-	Monthly  ScheduleItem `yaml:"monthly"`
+	Daily   ScheduleItem `yaml:"daily"`
+	Weekly  ScheduleItem `yaml:"weekly"`
+	Monthly ScheduleItem `yaml:"monthly"`
+	Weekend []int        `yaml:"weekend"`
 }
 
 type ScheduleItem struct {
 	Dbs       []string `yaml:"dbs"`
-	KeepCount int `yaml:"keep_count"`
-	Repeat    []int `yaml:"repeat"`
+	KeepCount int      `yaml:"keep_count"`
+	Repeat    []int    `yaml:"repeat"`
 	Kind      int
+	Today     time.Time
+	Weekend   []int
 }
 
 func (si ScheduleItem) Empty() bool {
@@ -37,69 +42,143 @@ func (si ScheduleItem) Empty() bool {
 }
 
 //TODO
-func NewScheduleItem(conf map[string]string, kind int) *ScheduleItem {
-	si := ScheduleItem{}
+func NewScheduleItem(conf map[string]string, kind int, weekends []int) *ScheduleItem {
+	si := ScheduleItem{Today: time.Now(), Weekend: weekends}
 	return &si
 }
 
-func (si ScheduleItem) GetKindPrewiew() string {
-	return getKindPrewiew(si.Kind)
-}
-
 func (si ScheduleItem) NeedToRun() bool {
-	// if self.repeat == None:
-    //         return False
-    //     if self.kind == Periodicity.DAILY:
-    //         return self.__check_daily_schedules()
-    //     elif self.kind == Periodicity.WEEKLY:
-    //         return self.__check_weekly_schedules()
-    //     elif self.kind == Periodicity.MONTHLY:
-    //         return self.__check_monthly_schedules()
-	return true
+	switch si.Kind {
+	case DAILY:
+		return si.checkDailySchedules()
+	case WEEKLY:
+		return si.checkWeeklySchedules()
+	case MONTHLY:
+		return si.checkMonthlySchedules()
+	default:
+		return false
+	}
 }
 
 func (si ScheduleItem) checkDailySchedules() bool {
-	// today = datetime.now()
-        
-    //     weekday = today.weekday()+1
-            
-    //     for day in self.repeat:
-    //         if (day == 0 or day == weekday):
-    //             return True
-	return true
+
+	if si.stopOnWeekend() {
+		return false
+	}
+
+	nwk := weekday(si.Today)
+	for i := range si.Repeat {
+		if si.Repeat[i] == 0 {
+			return true
+		}
+		if nwk == si.Repeat[i] {
+			return true
+		}
+	}
+	return false
 }
 
 func (si ScheduleItem) checkWeeklySchedules() bool {
-	// today = datetime.now()
-        
-	// week_number = today.isocalendar().week
 
-	// if (today.weekday()+1) != 7:
-	// 	return False
+	nwk := weekday(si.Today)
+	if len(si.Weekend) == 0 && nwk != 7 {
+		return false
+	}
 
-	// for week in self.repeat:
-	// 	if (week == 0 or week == week_number):
-	// 		return True
-	return true
+	r := false
+	_, w := si.Today.ISOWeek()
+	for i := range si.Repeat {
+		if si.Repeat[i] == 0 {
+			r = true
+			break
+		}
+		if w == si.Repeat[i] {
+			r = true
+			break
+		}
+	}
+
+	if len(si.Weekend) > 0 {
+		alwd := make([]int, 0, 7-len(si.Weekend))
+		for i := 1; i <= 7; i++ {
+			f := false
+			for j := range si.Weekend {
+				if si.Weekend[j] == i {
+					f = true
+					break
+				}
+			}
+			if !f {
+				alwd = append(alwd, i)
+			}
+		}
+		lastD := alwd[len(alwd)-1]
+		r = lastD == nwk
+	}
+
+	return r
 }
 
 func (si ScheduleItem) checkMonthlySchedules() bool {
-	// today = datetime.now()
-        
-    //     if today.month == 12:
-    //         year = today.year + 1
-    //         next_month = 1
-    //     else:
-    //         year = today.year
-    //         next_month = today.month + 1 
 
-    //     finish_day = (datetime(year, next_month, 1) - timedelta(days=1)).day
+	startDay := time.Date(si.Today.Year(), si.Today.Month(), si.Today.Day(), 0, 0, 0, 0, si.Today.Location())
+	endMonth := time.Date(si.Today.Year(), si.Today.Month()+1, 1, 0, 0, 0, 0, si.Today.Location()).Add(-24 * time.Hour)
 
-    //     if today.day != finish_day:
-    //         return False
+	if len(si.Weekend) == 0 {
+		return startDay == endMonth
+	}
 
-    //     for month in self.repeat:
-    //         if (month == 0 or month == today.month):
-    //             return True
-	return true
+	emwd := weekday(endMonth)
+
+	endOnWeekends := false
+	for i := range si.Weekend {
+		if si.Weekend[i] == emwd {
+			endOnWeekends = true
+			break
+		}
+	}
+
+	if !endOnWeekends {
+		return startDay == endMonth
+	}
+
+	alwd := make([]int, 0, 7-len(si.Weekend))
+	for i := 1; i <= 7; i++ {
+		f := false
+		for j := range si.Weekend {
+			if si.Weekend[j] == i {
+				f = true
+				break
+			}
+		}
+		if !f {
+			alwd = append(alwd, i)
+		}
+	}
+	lastD := alwd[len(alwd)-1]
+	diff := emwd - lastD
+	newEndMonth := time.Date(endMonth.Year(), endMonth.Month(), endMonth.Day()-diff, 0, 0, 0, 0, endMonth.Location())
+	return startDay == newEndMonth
+}
+
+func (si ScheduleItem) stopOnWeekend() bool {
+	if len(si.Weekend) == 0 {
+		return false
+	}
+	nwk := weekday(si.Today)
+	for i := range si.Weekend {
+		if si.Weekend[i] == nwk {
+			return true
+		}
+	}
+
+	return false
+}
+
+func weekday(date time.Time) int {
+	wd := int(date.Weekday())
+	if wd == 0 {
+		wd = 7
+	}
+	return wd
 }

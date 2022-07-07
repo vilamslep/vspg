@@ -1,7 +1,7 @@
 package fs
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -17,9 +17,9 @@ func GetSize(path string) (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		if ! info.IsDir() {
+		if !info.IsDir() {
 			return info.Size(), err
-		} 
+		}
 	} else {
 		return 0, err
 	}
@@ -66,17 +66,24 @@ func TempDir() (string, error) {
 }
 
 func createIfNotExists(path string) error {
-	return os.MkdirAll(path,0777)
+	return os.MkdirAll(path, 0777)
 }
 
-func CopyFile(src string, dst string) (error) {
-	input, err := ioutil.ReadFile(src)
+func CopyFile(src string, dst string) error {
+
+	fdr, err := os.Open(src)
 	if err != nil {
 		return err
 	}
+	defer fdr.Close()
 
-	err = ioutil.WriteFile(dst, input, 0644)
+	fdw, err := os.Create(dst)
 	if err != nil {
+		return err
+	}
+	defer fdw.Close()
+
+	if _, err := io.Copy(fdw, fdr); err != nil {
 		return err
 	}
 

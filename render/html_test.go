@@ -40,7 +40,7 @@ func TestRenderReport(t *testing.T) {
 	task.Items = append(task.Items, item1)
 	report.Tasks = append(report.Tasks, task)
 
-	if content, err := RenderReport(report); err != nil {
+	if content, err := RenderReport(report,"D:\\Projects\\psql.maintenance\\assets\\templates"); err != nil {
 		t.Fatal(err)
 	} else {
 		ioutil.WriteFile("out.html", content, 0777)

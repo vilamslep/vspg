@@ -38,9 +38,10 @@ func (sc SmptClient) Send(msgr notice.Messager) error {
 }
 
 func NewSmptClient(user string, password string, server string, port int) (client *SmptClient) {
-	client.user = user
-	client.password = password
-	client.server = server
-	client.port = port
-	return
+	return &SmptClient{
+		user: user,
+		password: password,
+		server: server,
+		port: port,
+	}
 }

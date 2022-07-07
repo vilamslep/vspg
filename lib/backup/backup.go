@@ -2,6 +2,7 @@ package backup
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/vilamslep/psql.maintenance/lib/config"
@@ -12,9 +13,9 @@ import (
 	"github.com/vilamslep/psql.maintenance/render"
 )
 
-var(
-	DatabaseLocation string
-	LogsErrors []string
+var (
+	DatabaseLocation   string
+	LogsErrors         []string
 	PGConnectionConfig psql.ConnectionConfig
 )
 
@@ -26,17 +27,17 @@ type BackupProcess struct {
 }
 
 func (b *BackupProcess) Run() {
-	logger.Info() //start backuping
+	logger.Info("start backuping")
 
 	for _, t := range b.tasks {
-		logger.Info() //handling of kind v.kind
+		logger.Infof("handling of", config.GetKindPrewiew(t.Kind))
 		if err := t.Run(b.config); err != nil {
-			logger.Error() //error
+			logger.Errorf("handling task is failed. %v", err)
 		}
 	}
 
 	if err := b.sendNotification(); err != nil {
-		logger.Error() //error
+		logger.Error("Notification is failed. %v", err)
 	}
 }
 
@@ -60,7 +61,7 @@ func (b *BackupProcess) renderReport() ([]byte, error) {
 	b.countSetStatus(&report)
 	b.copyBuildInStructToReport(&report)
 
-	return render.RenderReport(report)
+	return render.RenderReport(report, b.config.App.Folders.Templates)
 }
 
 func (b *BackupProcess) countSetStatus(report *render.BackupReport) {
@@ -100,28 +101,39 @@ func (b *BackupProcess) copyBuildInStructToReport(report *render.BackupReport) {
 
 			nt.Items = append(nt.Items, ni)
 		}
+		report.Tasks = append(report.Tasks, nt)
 	}
 }
 
-func NewBackupProcess(config config.Config) (*BackupProcess, error) {
-	
+func NewBackupProcess(conf config.Config) (*BackupProcess, error) {
+
 	b := BackupProcess{
-		config: config,
+		config: conf,
 	}
 
-	DatabaseLocation = config.Postgres.DataLocation
+	DatabaseLocation = conf.Postgres.DataLocation
 	LogsErrors = make([]string, 0, 2)
 	LogsErrors = append(LogsErrors, "pg_dump: ошибка:")
 	LogsErrors = append(LogsErrors, "pg_dump: error:")
 
+	PGConnectionConfig = psql.ConnectionConfig{
+		User:     conf.Postgres.User,
+		Password: conf.Postgres.Password,
+		Database: psql.Database{Name: "postgres"},
+		SSlMode:  false,
+	}
+
+	os.Setenv("PGUSER", PGConnectionConfig.Name)
+	os.Setenv("PGPASSWORD", PGConnectionConfig.Password)
+
 	b.date = time.Now()
-	tasks, err := CreateTaskBySchedules(config.Schedule)
+	tasks, err := CreateTaskBySchedules(conf.Schedule)
 	if err != nil {
-		logger.Error() //error
+		return nil, err
 	}
 	b.tasks = tasks
 
-	b.sender = config.GetSender()
+	b.sender = conf.GetSender()
 
 	return &b, nil
 }

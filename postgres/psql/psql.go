@@ -3,6 +3,7 @@ package psql
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -49,7 +50,11 @@ func Databases(pgConf ConnectionConfig,  dbsFilter []string) ([]Database, error)
 	defer db.Close()
 	var txt string
 	if len(dbsFilter) > 0 {
-		txt = strings.ReplaceAll(SearchDatabases, "$1", strings.Join(dbsFilter, ","))
+		nf := make([]string,0,len(dbsFilter))
+		for i := range dbsFilter {
+			nf = append(nf,fmt.Sprintf("'%s'", dbsFilter[i]))
+		}
+		txt = strings.ReplaceAll(SearchDatabases, "$1", strings.Join(nf, ","))
 	} else {
 		txt = AllDatabasesTxt
 	}
@@ -104,8 +109,7 @@ func createConnection(pgConf ConnectionConfig) (*sql.DB, error) {
 	}
 	defer func() {
         if r := recover(); r != nil {
-            logger.Error()//"Panic. Recovered in f", r
-			fmt.Println("Panic. Recovered in f", r)
+            logger.Error("Panic. Recovered in f", r)
         }
     }()
 	
@@ -116,8 +120,9 @@ func createConnection(pgConf ConnectionConfig) (*sql.DB, error) {
 }
 
 func CopyBinary(db string, src string, dst string) (err error) {
-	cmd := exec.Command(PsqlExe, "--dbname", db, "COPY" , src, "TO", dst, "WITH_BINARY")
-	
+	command := fmt.Sprintf("COPY %s TO '%s' WITH BINARY;", src, dst)
+	cmd := exec.Command(PsqlExe, "--username", "postgres", "--dbname", db, "--command", command)
+	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
         return err
     }

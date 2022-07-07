@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -69,7 +70,7 @@ func GetRootDir(path string, name string, kind int) (string, error) {
 		return "", fmt.Errorf("undefined kind. kind %d", kind)
 	}
 
-	backPath := fmt.Sprintf("%s\\%s\\%s", path, name, ft)
+	backPath := fmt.Sprintf("%s\\%s\\%s", path, strings.ToLower(name), ft)
 
 	return backPath, createIfNotExists(backPath)
 }
@@ -79,7 +80,7 @@ func CreateDirectories(root string, name string, children []string) (location ma
 	if err = createIfNotExists(path); err != nil {
 		return
 	}
-
+	location = make(map[string]string)
 	location["main"] = path
 
 	for _, ch := range children {
