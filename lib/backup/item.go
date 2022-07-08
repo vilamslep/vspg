@@ -163,7 +163,7 @@ func (i *Item) setDatabaseSize() error {
 }
 
 func (i *Item) dump(lpath string, excludeTabls []string) error {
-	fout := fmt.Sprintf("log\\%s.log", i.Name)
+	fout := fmt.Sprintf("%s.log", i.Name)
 	out, err := os.Create(fout)
 	if err != nil {
 		return err

@@ -70,7 +70,7 @@ func NewTask(name string, kind int, dbs []string, keepCount int) (*Task, error){
 	}
 
 	if dbsInServer, err := psql.Databases(PGConnectionConfig, dbs); err == nil {
-		addNotFoundDatabases(dbs, dbsInServer)
+		dbsInServer = addNotFoundDatabases(dbs, dbsInServer)
 		
 		for _, db := range dbsInServer {
 			item := NewItem(db)
@@ -84,7 +84,7 @@ func NewTask(name string, kind int, dbs []string, keepCount int) (*Task, error){
 	}
 }
 
-func addNotFoundDatabases(dbs[]string, dbsInServer []psql.Database) {
+func addNotFoundDatabases(dbs[]string, dbsInServer []psql.Database) []psql.Database {
 	for _, i := range dbs {
 		found := false
 		for _, j := range dbsInServer {
@@ -97,6 +97,7 @@ func addNotFoundDatabases(dbs[]string, dbsInServer []psql.Database) {
 			dbsInServer = append(dbsInServer, psql.Database{Name: i})
 		}
 	}	
+	return dbsInServer
 }
 
 func CreateTaskBySchedules(schedules config.Schedule) ([]Task, error) {

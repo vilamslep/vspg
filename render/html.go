@@ -12,6 +12,19 @@ const (
 	StatusError   = 2
 )
 
+func GetStatusPreview(status int) string{
+	switch status {
+	case StatusError:
+		return "Error"
+	case StatusWarning:
+		return "Warning"
+	case StatusSuccess:
+		return "Success"
+	default:
+		return ""
+	}
+}
+
 func RenderReport(report BackupReport, templatesPath string) (content []byte, err error) {
 	tmpl, err := template.ParseFiles(fmt.Sprintf("%s\\%s", templatesPath, "report.html"))
 

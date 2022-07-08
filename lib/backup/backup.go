@@ -24,6 +24,7 @@ type BackupProcess struct {
 	date   time.Time
 	tasks  []Task
 	sender notice.Sender
+	status int
 }
 
 func (b *BackupProcess) Run() {
@@ -44,7 +45,7 @@ func (b *BackupProcess) Run() {
 func (b *BackupProcess) sendNotification() error {
 	if content, err := b.renderReport(); err == nil {
 		letter := email.Letter{
-			Subject:  b.config.Email.Subject,
+			Subject:  fmt.Sprintf("%s [%s]", b.config.Email.Subject, render.GetStatusPreview(b.status)) ,
 			From:     b.config.Email.User,
 			FromName: b.config.Email.SenderName,
 			To:       b.config.Email.Recivers,
@@ -79,6 +80,7 @@ func (b *BackupProcess) countSetStatus(report *render.BackupReport) {
 	} else {
 		report.Status = render.StatusSuccess
 	}
+	b.status = report.Status
 }
 
 func (b *BackupProcess) copyBuildInStructToReport(report *render.BackupReport) {
