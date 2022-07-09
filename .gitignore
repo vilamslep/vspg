@@ -1,3 +1,4 @@
 .vscode
 setting.yaml
 *.log
+*.exe
