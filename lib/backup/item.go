@@ -89,7 +89,7 @@ func (i *Item) backup(tempDir string, targetDir string) (err error) {
 	}
 
 	if len(excludeTabls) > 0 {
-		logger.Debug("excluded tables are %s", strings.Join(excludeTabls, ","))
+		logger.Debugf("excluded tables are %s", strings.Join(excludeTabls, ","))
 		chdir = append(chdir, "binary")
 	}
 
