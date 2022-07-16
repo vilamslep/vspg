@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/smtp"
 
-	"github.com/vilamslep/psql.maintenance/notice"
+	"github.com/vilamslep/vspg/notice"
 )
 
 type Mail struct {

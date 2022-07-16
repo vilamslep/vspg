@@ -5,12 +5,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/vilamslep/psql.maintenance/lib/config"
-	"github.com/vilamslep/psql.maintenance/logger"
-	"github.com/vilamslep/psql.maintenance/notice"
-	"github.com/vilamslep/psql.maintenance/notice/email"
-	"github.com/vilamslep/psql.maintenance/postgres/psql"
-	"github.com/vilamslep/psql.maintenance/render"
+	"github.com/vilamslep/vspg/lib/config"
+	"github.com/vilamslep/vspg/logger"
+	"github.com/vilamslep/vspg/notice"
+	"github.com/vilamslep/vspg/notice/email"
+	"github.com/vilamslep/vspg/postgres/psql"
+	"github.com/vilamslep/vspg/render"
 )
 
 var (
@@ -91,14 +91,24 @@ func (b *BackupProcess) copyBuildInStructToReport(report *render.BackupReport) {
 
 		for _, i := range t.Items {
 			ni := render.Item{}
-			ni.Name = i.Name
+			if i.Type == POSTGRES {
+				ni.Name = i.Name
+			} else {
+				ni.Name = i.File
+			}
+
 			ni.OID = i.OID
 			ni.StartTime = i.StartTime.Format("03:04:05")
 			ni.FinishTime = i.FinishTime.Format("03:04:05")
 			ni.Status = i.Status
 			ni.BackupPath = i.BackupPath
-			ni.BackupSize = fmt.Sprintf("%.2dGB", (i.BackupSize / 1024 / 1024 / 1024))
-			ni.DatabaseSize = fmt.Sprintf("%.2dGB", (i.DatabaseSize / 1024 / 1024 / 1024))
+			if i.BackupSize > (1024 * 1024 * 1024) {
+				ni.BackupSize = fmt.Sprintf("%.2dGB", (i.BackupSize / 1024 / 1024 / 1024))
+				ni.DatabaseSize = fmt.Sprintf("%.2dGB", (i.DatabaseSize / 1024 / 1024 / 1024))
+			} else {
+				ni.BackupSize = fmt.Sprintf("%.2dMB", (i.BackupSize / 1024 / 1024))
+				ni.DatabaseSize = fmt.Sprintf("%.2dMB", (i.DatabaseSize / 1024 / 1024))
+			}
 			ni.Details = i.Details
 
 			nt.Items = append(nt.Items, ni)

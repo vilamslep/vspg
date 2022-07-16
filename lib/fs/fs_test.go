@@ -33,7 +33,13 @@ func TestCompress(t *testing.T) {
 }
 
 func TestCopyFile(t *testing.T) {
-	if err := CopyFile("C:\\Temp\\postgres.backup\\kfk.zip", "C:\\backup\\daily\\05-07-2022\\kfk.zip"); err != nil {
+	if err := Copy("C:\\Pictures\\Art\\2.jpg", "C:\\backup\\2.jpg"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCopyDirectory(t *testing.T) {
+	if err := Copy("C:\\backup\\daily\\kfk", "C:\\backup\\kfk"); err != nil {
 		t.Fatal(err)
 	}
 }

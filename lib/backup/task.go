@@ -4,11 +4,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/vilamslep/psql.maintenance/lib/config"
-	"github.com/vilamslep/psql.maintenance/lib/fs"
-	"github.com/vilamslep/psql.maintenance/logger"
-	"github.com/vilamslep/psql.maintenance/postgres/psql"
-	"github.com/vilamslep/psql.maintenance/render"
+	"github.com/vilamslep/vspg/lib/config"
+	"github.com/vilamslep/vspg/lib/fs"
+	"github.com/vilamslep/vspg/logger"
+	"github.com/vilamslep/vspg/postgres/psql"
+	"github.com/vilamslep/vspg/render"
 )
 
 type Task struct{
@@ -62,25 +62,50 @@ func (t *Task) CountStatuses() (cerr int, cwarn int, csuc int) {
 	return	
 }
 
-func NewTask(name string, kind int, dbs []string, keepCount int) (*Task, error){
+func NewTask(name string, kind int, dbs []string, files []string, keepCount int) (*Task, error){
 	t := Task{
 		Name: name,
 		Kind:  kind,
 		KeepCount: keepCount,
 	}
 
+	if len(dbs) > 0 || len(files) > 0 {
+		if len(dbs) > 0 {
+			err := t.appendPgDbs(dbs) 
+			if err != nil {
+				return &t, err
+			}			
+		}
+	
+		if len(files) > 0 {
+			t.appendFiles(files)
+		}
+
+		return &t, nil
+	} else {
+		return &t, nil
+	}
+}
+
+func (t *Task) appendPgDbs( dbs []string ) error {
 	if dbsInServer, err := psql.Databases(PGConnectionConfig, dbs); err == nil {
 		dbsInServer = addNotFoundDatabases(dbs, dbsInServer)
 		
 		for _, db := range dbsInServer {
-			item := NewItem(db)
+			item := NewItem(POSTGRES, db, "")
 			t.Items = append(t.Items, &item)
 		}
-		
-		return &t, err
-	
 	} else {
-		return nil, err
+		return err
+	}
+
+	return nil
+}
+
+func (t *Task) appendFiles( files []string) {
+	for _, f := range files {
+		item := NewItem(FILE, psql.Database{}, f)
+		t.Items = append(t.Items, &item)
 	}
 }
 
@@ -139,7 +164,7 @@ func createTask(sch config.ScheduleItem) (t Task, ok bool, err error) {
     if sch.NeedToRun(){
 		
 		name := config.GetKindPrewiew(sch.Kind)
-		if t, err := NewTask(name, sch.Kind, sch.Dbs, sch.KeepCount); err == nil {
+		if t, err := NewTask(name, sch.Kind, sch.Dbs, sch.Files, sch.KeepCount); err == nil {
 			return *t, true, nil
 		} else {
 			return Task{}, false, err

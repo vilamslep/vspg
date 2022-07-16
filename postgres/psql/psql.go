@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	_ "github.com/lib/pq"
-	"github.com/vilamslep/psql.maintenance/logger"
+	"github.com/vilamslep/vspg/logger"
 )
 
 type Database struct {

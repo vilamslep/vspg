@@ -11,7 +11,7 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/vilamslep/psql.maintenance/lib/config"
+	"github.com/vilamslep/vspg/lib/config"
 )
 
 func IsEnoughSpace(src string, dst string, size int64) (bool, error) {

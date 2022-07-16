@@ -10,12 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vilamslep/psql.maintenance/lib/config"
-	"github.com/vilamslep/psql.maintenance/lib/fs"
-	"github.com/vilamslep/psql.maintenance/logger"
-	"github.com/vilamslep/psql.maintenance/postgres/pgdump"
-	"github.com/vilamslep/psql.maintenance/postgres/psql"
-	"github.com/vilamslep/psql.maintenance/render"
+	"github.com/vilamslep/vspg/lib/config"
+	"github.com/vilamslep/vspg/lib/fs"
+	"github.com/vilamslep/vspg/logger"
+	"github.com/vilamslep/vspg/postgres/pgdump"
+	"github.com/vilamslep/vspg/postgres/psql"
+	"github.com/vilamslep/vspg/render"
+)
+
+var (
+	POSTGRES = 1
+	FILE     = 2
 )
 
 type RestoreConfig struct {
@@ -26,6 +31,7 @@ type RestoreConfig struct {
 
 type Item struct {
 	psql.Database
+	File         string
 	Status       int
 	StartTime    time.Time
 	FinishTime   time.Time
@@ -34,19 +40,19 @@ type Item struct {
 	BackupPath   string
 	Details      string
 	config       config.Config
+	Type         int
 }
 
 func (i *Item) ExecuteBackup(tempDir string, targetDir string) (err error) {
-	if i.OID == 0 {
-		i.Status = render.StatusWarning
-		i.Details = "oid is empty. Database isn't found in server"
-		return nil
+	
+	switch i.Type {
+	case POSTGRES:
+		err = i.pgBackup(tempDir, targetDir)
+	case FILE:
+		err = i.fileBackup(targetDir) 
+	default:
+		err = fmt.Errorf("unexpected type of item, type is %d", i.Type)
 	}
-
-	i.StartTime = time.Now()
-	i.setDatabaseSize()
-
-	err = i.backup(tempDir, targetDir)
 
 	if err != nil {
 		i.Details += err.Error() + ";"
@@ -59,8 +65,47 @@ func (i *Item) ExecuteBackup(tempDir string, targetDir string) (err error) {
 	return err
 }
 
-func (i *Item) backup(tempDir string, targetDir string) (err error) {
+func (i *Item) fileBackup(targetDir string) (err error) {
+	
+	i.StartTime = time.Now()
+	i.setDatabaseSize()
+	
+	logger.Debug("checking space in target directory")
+	if ok, err := i.checkSpace(targetDir); err != nil {
+		return err
+	} else if !ok {
+		return fmt.Errorf("%s doesn't have enough space. Db %s. Size %d", targetDir, i.Name, i.DatabaseSize)
+	} else {
+		logger.Debug("success")
+	}
+	
+	dstName := filepath.Base(i.File)
+	logger.Debug("coping backup to target directory")
+	i.BackupPath = fmt.Sprintf("%s\\%s", targetDir, dstName)
+	if err := fs.Copy(i.File, i.BackupPath); err == nil {
+		i.BackupSize, err = fs.GetSize(i.BackupPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		return err
+	}
+	logger.Debug("success")
 
+	return nil	
+}
+
+func (i *Item) pgBackup(tempDir string, targetDir string) (err error) {
+
+	if i.OID == 0 {
+		i.Status = render.StatusWarning
+		i.Details = "oid is empty. Database isn't found in server"
+		return nil
+	}
+
+	i.StartTime = time.Now()
+	i.setDatabaseSize()
+	
 	logger.Debug("checking space in template directory")
 
 	if ok, err := i.checkSpace(tempDir); err != nil {
@@ -125,7 +170,7 @@ func (i *Item) backup(tempDir string, targetDir string) (err error) {
 	logger.Debug("coping backup to target directory")
 	dstName := filepath.Base(archive)
 	i.BackupPath = fmt.Sprintf("%s\\%s", targetDir, dstName)
-	if err := fs.CopyFile(archive, i.BackupPath); err == nil {
+	if err := fs.Copy(archive, i.BackupPath); err == nil {
 		i.BackupSize, err = fs.GetSize(i.BackupPath)
 		if err != nil {
 			return err
@@ -148,18 +193,33 @@ func (i *Item) backup(tempDir string, targetDir string) (err error) {
 }
 
 func (i *Item) checkSpace(path string) (bool, error) {
-	dbStora := fmt.Sprintf("%s\\base\\%d", DatabaseLocation, i.OID)
+	var dbStora string
+	if i.Type == POSTGRES {
+		dbStora = fmt.Sprintf("%s\\base\\%d", DatabaseLocation, i.OID)
+	} else {
+		dbStora = i.File
+	}
+	
 	return fs.IsEnoughSpace(dbStora, path, i.BackupSize)
 }
 
 func (i *Item) setDatabaseSize() error {
-	dbStora := fmt.Sprintf("%s\\base\\%d", DatabaseLocation, i.OID)
-	if c, err := fs.GetSize(dbStora); err == nil {
-		i.DatabaseSize = c
+	if i.Type == POSTGRES {
+		dbStora := fmt.Sprintf("%s\\base\\%d", DatabaseLocation, i.OID)
+		if c, err := fs.GetSize(dbStora); err == nil {
+			i.DatabaseSize = c
+		} else {
+			return err
+		}
 	} else {
-		return err
+		if c, err := fs.GetSize(i.File); err == nil {
+			i.DatabaseSize = c
+		} else {
+			return err
+		}
 	}
 	return nil
+
 }
 
 func (i *Item) dump(lpath string, excludeTabls []string) error {
@@ -250,6 +310,10 @@ func (i *Item) writeRestoreFile(mainPath string, binfiles []string) error {
 	return nil
 }
 
-func NewItem(db psql.Database) Item {
-	return Item{Database: db}
+func NewItem(kind int, db psql.Database, file string) Item {
+	return Item{
+		Database: db,
+		File:     file,
+		Type:     kind,
+	}
 }

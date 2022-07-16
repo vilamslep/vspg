@@ -1,4 +1,4 @@
-module github.com/vilamslep/psql.maintenance
+module github.com/vilamslep/vspg
 
 go 1.18
 
