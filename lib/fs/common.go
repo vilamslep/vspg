@@ -59,14 +59,14 @@ func Remove(path string) error {
 }
 
 func TempDir() (string, error) {
-	err := createIfNotExists(WIN_OS_PROGDATA)
+	err := CreateIfNotExists(WIN_OS_PROGDATA)
 	if err != nil {
 		return "", err
 	}
 	return WIN_OS_PROGDATA, nil
 }
 
-func createIfNotExists(path string) error {
+func CreateIfNotExists(path string) error {
 	return os.MkdirAll(path, 0777)
 }
 
@@ -121,7 +121,7 @@ func CopyDirectory(src string, dst string) error {
 		dstPath := filepath.Join(dst, entry.Name())
 
 		if entry.IsDir() {
-			if err := createIfNotExists(dstPath); err != nil {
+			if err := CreateIfNotExists(dstPath); err != nil {
 				return nil
 			}
 		}

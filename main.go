@@ -13,12 +13,6 @@ import (
 )
 
 func main() {
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Error("Panic. Recovered in f", r)
-		}
-	}()
-
 	c, err := config.LoadSetting("setting.yaml")
 	if err != nil {
 		logger.Fatalf("loading config is failed. %v", err)

@@ -72,12 +72,12 @@ func GetRootDir(path string, name string, kind int) (string, error) {
 
 	backPath := fmt.Sprintf("%s\\%s\\%s", path, strings.ToLower(name), ft)
 
-	return backPath, createIfNotExists(backPath)
+	return backPath, CreateIfNotExists(backPath)
 }
 
 func CreateDirectories(root string, name string, children []string) (location map[string]string, err error) {
 	path := fmt.Sprintf("%s\\%s", root, name)
-	if err = createIfNotExists(path); err != nil {
+	if err = CreateIfNotExists(path); err != nil {
 		return
 	}
 	location = make(map[string]string)
@@ -85,7 +85,7 @@ func CreateDirectories(root string, name string, children []string) (location ma
 
 	for _, ch := range children {
 		chPath := fmt.Sprintf("%s\\%s", path, ch)
-		if err := createIfNotExists(chPath); err != nil {
+		if err := CreateIfNotExists(chPath); err != nil {
 			return nil, err
 		}
 		location[ch] = chPath

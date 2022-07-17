@@ -44,12 +44,12 @@ type Item struct {
 }
 
 func (i *Item) ExecuteBackup(tempDir string, targetDir string) (err error) {
-	
+
 	switch i.Type {
 	case POSTGRES:
 		err = i.pgBackup(tempDir, targetDir)
 	case FILE:
-		err = i.fileBackup(targetDir) 
+		err = i.fileBackup(targetDir)
 	default:
 		err = fmt.Errorf("unexpected type of item, type is %d", i.Type)
 	}
@@ -66,10 +66,10 @@ func (i *Item) ExecuteBackup(tempDir string, targetDir string) (err error) {
 }
 
 func (i *Item) fileBackup(targetDir string) (err error) {
-	
+
 	i.StartTime = time.Now()
 	i.setDatabaseSize()
-	
+
 	logger.Debug("checking space in target directory")
 	if ok, err := i.checkSpace(targetDir); err != nil {
 		return err
@@ -78,10 +78,14 @@ func (i *Item) fileBackup(targetDir string) (err error) {
 	} else {
 		logger.Debug("success")
 	}
-	
+
 	dstName := filepath.Base(i.File)
 	logger.Debug("coping backup to target directory")
 	i.BackupPath = fmt.Sprintf("%s\\%s", targetDir, dstName)
+	if err := fs.CreateIfNotExists(i.BackupPath); err != nil {
+		return err
+	}
+
 	if err := fs.Copy(i.File, i.BackupPath); err == nil {
 		i.BackupSize, err = fs.GetSize(i.BackupPath)
 		if err != nil {
@@ -92,7 +96,7 @@ func (i *Item) fileBackup(targetDir string) (err error) {
 	}
 	logger.Debug("success")
 
-	return nil	
+	return nil
 }
 
 func (i *Item) pgBackup(tempDir string, targetDir string) (err error) {
@@ -105,7 +109,7 @@ func (i *Item) pgBackup(tempDir string, targetDir string) (err error) {
 
 	i.StartTime = time.Now()
 	i.setDatabaseSize()
-	
+
 	logger.Debug("checking space in template directory")
 
 	if ok, err := i.checkSpace(tempDir); err != nil {
@@ -199,7 +203,7 @@ func (i *Item) checkSpace(path string) (bool, error) {
 	} else {
 		dbStora = i.File
 	}
-	
+
 	return fs.IsEnoughSpace(dbStora, path, i.BackupSize)
 }
 
