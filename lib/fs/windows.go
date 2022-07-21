@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"unsafe"
 
 	"github.com/vilamslep/vspg/lib/config"
+	vos "github.com/vilamslep/vspg/os"
 )
 
 func IsEnoughSpace(src string, dst string, size int64) (bool, error) {
@@ -24,7 +26,7 @@ func IsEnoughSpace(src string, dst string, size int64) (bool, error) {
 
 	if size > 0 {
 		return free > size, err
-	} 
+	}
 
 	used, err := GetSize(src)
 
@@ -127,4 +129,17 @@ func removeFile(path string, files []os.FileInfo) error {
 		}
 	}
 	return nil
+}
+
+//TODO when try to copy to NAS or shared network folder 1GB copies during 15-20 min
+//but if try to use "powershell cp src dst" it spend 2-3 min
+func Copy(src string, dst string) error {
+	fdr, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer fdr.Close()
+
+	cmd := exec.Command("powershell", "cp", "-Force", "-Recurse", src, dst)
+	return vos.ExecCommand(cmd)
 }

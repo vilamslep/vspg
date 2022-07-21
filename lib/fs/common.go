@@ -1,8 +1,6 @@
 package fs
 
 import (
-	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -70,65 +68,3 @@ func CreateIfNotExists(path string) error {
 	return os.MkdirAll(path, 0777)
 }
 
-func Copy(src string, dst string) error {
-
-	fdr, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer fdr.Close()
-
-	stat, err := fdr.Stat()
-
-	if err != nil {
-		return err
-	}
-	isDir := stat.IsDir()
-
-	if !isDir {
-		if err := CopyFile(fdr, dst); err != nil {
-			return err
-		}
-	} else {
-		if err := CopyDirectory(src, dst); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func CopyFile(fdr *os.File, dst string) error {
-	fdw, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer fdw.Close()
-
-	if _, err := io.Copy(fdw, fdr); err != nil {
-		return err
-	}
-	return nil
-}
-
-func CopyDirectory(src string, dst string) error {
-	entries, err := ioutil.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			if err := CreateIfNotExists(dstPath); err != nil {
-				return nil
-			}
-		}
-		
-		if err := Copy(srcPath, dstPath); err != nil {
-			return err
-		}
-	}
-	return nil
-}

@@ -2,9 +2,9 @@ package pgdump
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
-	"syscall"
+
+	vos "github.com/vilamslep/vspg/os"
 )
 
 var (
@@ -20,20 +20,9 @@ func Dump(db string, dst string, excludedTables []string) (stdout bytes.Buffer, 
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 
-	if err := cmd.Start(); err != nil {
-		return stdout, stderr, err
-	}
+	err = vos.ExecCommand(cmd)
 
-	if err := cmd.Wait(); err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				return stdout, stderr, fmt.Errorf("Exit Status: %d", status.ExitStatus())
-			}
-		} else {
-			return stdout, stderr, fmt.Errorf("cmd.Wait: %v", err)
-		}
-	}
-	return stdout, stderr, nil
+	return stdout, stderr, err
 }
 
 func excludingArgs(cmd *exec.Cmd, excludedTable []string) {

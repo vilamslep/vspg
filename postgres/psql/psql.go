@@ -6,10 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 
 	_ "github.com/lib/pq"
-	"github.com/vilamslep/vspg/logger"
+	vos "github.com/vilamslep/vspg/os"
 )
 
 type Database struct {
@@ -18,14 +17,14 @@ type Database struct {
 }
 
 type ConnectionConfig struct {
-	User string
+	User     string
 	Password string
 	Database
 	SSlMode bool
 }
 
 func (c ConnectionConfig) String() string {
-	var mode string 
+	var mode string
 	if c.SSlMode {
 		mode = "enable"
 	} else {
@@ -36,13 +35,14 @@ func (c ConnectionConfig) String() string {
 
 var (
 	AllDatabasesTxt string
-	LargeTablesTxt string
-	SearchDatabases string 
-	PsqlExe string
+	LargeTablesTxt  string
+	SearchDatabases string
+	PsqlExe         string
 )
-//TODO I have to just define query args witout replacing substring in the query text 
-func Databases(pgConf ConnectionConfig,  dbsFilter []string) ([]Database, error) {
-	
+
+//TODO I have to just define query args witout replacing substring in the query text
+func Databases(pgConf ConnectionConfig, dbsFilter []string) ([]Database, error) {
+
 	db, err := createConnection(pgConf)
 	if err != nil {
 		return nil, err
@@ -50,9 +50,9 @@ func Databases(pgConf ConnectionConfig,  dbsFilter []string) ([]Database, error)
 	defer db.Close()
 	var txt string
 	if len(dbsFilter) > 0 {
-		nf := make([]string,0,len(dbsFilter))
+		nf := make([]string, 0, len(dbsFilter))
 		for i := range dbsFilter {
-			nf = append(nf,fmt.Sprintf("'%s'", dbsFilter[i]))
+			nf = append(nf, fmt.Sprintf("'%s'", dbsFilter[i]))
 		}
 		txt = strings.ReplaceAll(SearchDatabases, "$1", strings.Join(nf, ","))
 	} else {
@@ -77,7 +77,6 @@ func Databases(pgConf ConnectionConfig,  dbsFilter []string) ([]Database, error)
 	return dbs, nil
 }
 
-
 func ExcludedTables(pgConf ConnectionConfig) ([]string, error) {
 	db, err := createConnection(pgConf)
 	if err != nil {
@@ -89,7 +88,7 @@ func ExcludedTables(pgConf ConnectionConfig) ([]string, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	tables := make([]string,0,0)
+	tables := make([]string, 0, 0)
 
 	for rows.Next() {
 		var table string
@@ -107,12 +106,7 @@ func createConnection(pgConf ConnectionConfig) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-        if r := recover(); r != nil {
-            logger.Error("Panic. Recovered in f", r)
-        }
-    }()
-	
+
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}
@@ -123,18 +117,7 @@ func CopyBinary(db string, src string, dst string) (err error) {
 	command := fmt.Sprintf("COPY %s TO '%s' WITH BINARY;", src, dst)
 	cmd := exec.Command(PsqlExe, "--username", "postgres", "--dbname", db, "--command", command)
 	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-        return err
-    }
 
-    if err := cmd.Wait(); err != nil {
-        if exiterr, ok := err.(*exec.ExitError); ok {
-            if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-                return fmt.Errorf("Exit Status: %d", status.ExitStatus())
-            }
-        } else {
-            return fmt.Errorf("cmd.Wait: %v", err)
-        }
-    }
-	return err
+	return vos.ExecCommand(cmd)
+
 }
