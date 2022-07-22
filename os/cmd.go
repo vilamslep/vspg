@@ -7,8 +7,6 @@ import (
 )
 
 func ExecCommand(cmd *exec.Cmd) (err error) {
-	// cmd := exec.Command("powershell", "cp", "-Force", "-Recurse", path, dst)
-	// cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return err
 	}

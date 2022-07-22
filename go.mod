@@ -6,6 +6,7 @@ require gopkg.in/yaml.v2 v2.4.0
 
 require (
 	github.com/lib/pq v1.10.6
+	github.com/pkg/errors v0.9.1
 	go.uber.org/zap v1.21.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )

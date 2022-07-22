@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	_ "github.com/lib/pq"
 	vos "github.com/vilamslep/vspg/os"
 )
@@ -118,6 +120,8 @@ func CopyBinary(db string, src string, dst string) (err error) {
 	cmd := exec.Command(PsqlExe, "--username", "postgres", "--dbname", db, "--command", command)
 	cmd.Stderr = os.Stderr
 
-	return vos.ExecCommand(cmd)
+	err = vos.ExecCommand(cmd)
+
+	return errors.Wrapf(err, "binary copying is failed. Command", command)
 
 }

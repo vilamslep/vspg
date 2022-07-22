@@ -31,7 +31,7 @@ func (b *BackupProcess) Run() {
 	logger.Info("start backuping")
 
 	for _, t := range b.tasks {
-		logger.Infof("handling of", config.GetKindPrewiew(t.Kind))
+		logger.Infof("handling of %s", config.GetKindPrewiew(t.Kind))
 		if err := t.Run(b.config); err != nil {
 			logger.Errorf("handling task is failed. %v", err)
 		}

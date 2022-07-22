@@ -1,57 +1,150 @@
 app:
   folders:
-    templates: path
-    queries: path
+    templates: C:\maintenance\vspg\assets\templates
+    queries: C:\maintenance\vspg\assets\sql
 postgres:
-  user: backup_user
-  password: backup_user_secret
-  host: server_host
+  user: postgres
+  password: 2j7hw{Bhq#DR2zC*P~wMa2@n7
+  host: localhost
   port: 5432
-  data_location: pgdata
+  data_location: F:\psql\data
 target_folder: 
-  path: tagret_path
+  path: E:\backup\psql
   user: ''
   password: ''
 utils:
-  dump: \path\to\pg_dump.exe
-  psql: \path\to\psql.exe
-  compress: \path\to\7z.exe
+  dump: C:\Program Files\PostgreSQL\14.1-2.1C\bin\pg_dump.exe
+  psql: C:\Program Files\PostgreSQL\14.1-2.1C\bin\psql.exe
+  compress: C:\Program Files\7-Zip\7z.exe
 email:
-  user: mail@mail.net
-  fromName: preview
-  password: mail_password
-  smtp_host: smtp.mail.net
+  user: almuertservice@yandex.ru
+  fromName: Vspg
+  password: pgcrclenuxcojoyy
+  smtp_host: smtp.yandex.ru
   smtp_port: 587
   recivers:
-  - reciver@mail.net
+  - almuertservice@yandex.ru
   letter:
-    subject: Postgres.Backup
+    subject: Rusdoors.Backup
 schedules:
   daily:
    dbs:
-   - db
-   keep_count: 5
-   # number of days of week. If 0 then everyday. If define a list from 1 to 7 then back up only these days of week 
+   - anapa
+   - astrah
+   - bgrad
+   - buh3
+   - chlb
+   - cht
+   - htmsk
+   - igev
+   - kir
+   - krdr
+   - krysk
+   - kzn
+   - mhch
+   - msk
+   - mski
+   - mtsh
+   - nvsb
+   - ovriv
+   - rst
+   - sln
+   - smr
+   - southsh
+   - spbsharp
+   - srpl
+   - szn
+   - tmn
+   - tmsk
+   - ufa
+   - urga
+   - vl
+   - vlca
+   - ivanovo
+   - newalex
+   - newrus 
+   keep_count: 7
    repeat: 
-   - 1
-   - 2
-   - 3
-   - 4
-   - 5
+   - 0
    kind: 0
   weekly:
     dbs:
-    - db
+     - anapa
+     - astrah
+     - bgrad
+     - buh3
+     - chlb
+     - cht
+     - htmsk
+     - igev
+     - kir
+     - krdr
+     - krysk
+     - kzn
+     - mhch
+     - msk
+     - mski
+     - mtsh
+     - nvsb
+     - ovriv
+     - rst
+     - sln
+     - smr
+     - southsh
+     - spbsharp
+     - srpl
+     - szn
+     - tmn
+     - tmsk
+     - ufa
+     - urga
+     - vl
+     - vlca
+     - ivanovo
+     - newalex
+     - newrus
     keep_count: 4
-    # number of week of year. If 0 then everyweek. If define a list from 1 to 52 then back up only these weeks of years
     repeat:
     - 0
     kind: 1
   monthly:
     dbs:
-    - db
+     - anapa
+     - astrah
+     - bgrad
+     - buh3
+     - chlb
+     - cht
+     - htmsk
+     - igev
+     - kir
+     - krdr
+     - krysk
+     - kzn
+     - mhch
+     - msk
+     - mski
+     - mtsh
+     - nvsb
+     - ovriv
+     - rst
+     - sln
+     - smr
+     - southsh
+     - spbsharp
+     - srpl
+     - szn
+     - tmn
+     - tmsk
+     - ufa
+     - urga
+     - vl
+     - vlca
+     - ivanovo
+     - newalex
+     - newrus
     keep_count: 3
-    # number of month of year. If 0 then everymonth. If define a list from 1 to 12 then back up only these monthes of years
     repeat: 
     - 0
-    kind: 2
+    kind: 1
+    
