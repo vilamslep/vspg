@@ -1,9 +1,9 @@
 package psql
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -118,10 +118,13 @@ func createConnection(pgConf ConnectionConfig) (*sql.DB, error) {
 func CopyBinary(db string, src string, dst string) (err error) {
 	command := fmt.Sprintf("COPY %s TO '%s' WITH BINARY;", src, dst)
 	cmd := exec.Command(PsqlExe, "--username", "postgres", "--dbname", db, "--command", command)
-	cmd.Stderr = os.Stderr
 
-	err = vos.ExecCommand(cmd)
+	var stderr bytes.Buffer
 
-	return errors.Wrapf(err, "binary copying is failed. Command", command)
+	cmd.Stderr = &stderr
 
+	if err := vos.ExecCommand(cmd); err != nil {
+		return errors.Wrapf(err, "binary copying is failed. Command %s. \n stderr: %s", command, stderr.String())
+	}
+	return err
 }
