@@ -1,6 +1,7 @@
 package fs
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/pkg/errors"
 	"github.com/vilamslep/vspg/lib/config"
 	vos "github.com/vilamslep/vspg/os"
 )
@@ -140,6 +142,14 @@ func Copy(src string, dst string) error {
 	}
 	defer fdr.Close()
 
-	cmd := exec.Command("powershell", "cp", "-Force", "-Recurse", src, dst)
-	return vos.ExecCommand(cmd)
+	cmd := exec.Command("powershell", "cp", "-Force", "-Recurse", fmt.Sprintf("\"%s\"", src), fmt.Sprintf("\"%s\"", dst))
+
+	var stderr bytes.Buffer
+
+	cmd.Stderr = &stderr
+
+	if err := vos.ExecCommand(cmd); err != nil {
+		return errors.Wrapf(err, "copying files is failed. Command %s. \n stderr: %s", cmd, stderr.String())
+	}
+	return err
 }
