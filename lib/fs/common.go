@@ -1,8 +1,10 @@
 package fs
 
 import (
+	"bufio"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -52,8 +54,13 @@ func getDirectorySize(path string) (totalSize int64, err error) {
 	return
 }
 
-func Remove(path string) error {
-	return os.RemoveAll(path)
+func Remove(paths ...string) error {
+	for _, path := range paths {
+		if err := os.RemoveAll(path); err != nil {
+			return err
+		} 
+	}
+	return nil	
 }
 
 func TempDir() (string, error) {
@@ -68,3 +75,19 @@ func CreateIfNotExists(path string) error {
 	return os.MkdirAll(path, 0777)
 }
 
+func LoadEnvfile(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		path := strings.Split(sc.Text(), "=")
+		if len(path) < 2 {
+			continue
+		}
+		os.Setenv(path[0], path[1])
+	}
+	return sc.Err()
+}

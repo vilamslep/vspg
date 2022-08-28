@@ -2,7 +2,6 @@ package backup
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/vilamslep/vspg/lib/config"
@@ -32,9 +31,11 @@ func (b *BackupProcess) Run() {
 
 	for _, t := range b.tasks {
 		logger.Infof("handling of %s", config.GetKindPrewiew(t.Kind))
+
 		if err := t.Run(b.config); err != nil {
 			logger.Errorf("handling task is failed. %v", err)
 		}
+
 	}
 
 	if err := b.sendNotification(); err != nil {
@@ -43,9 +44,13 @@ func (b *BackupProcess) Run() {
 }
 
 func (b *BackupProcess) sendNotification() error {
+	if len(b.tasks) == 0 {
+		return nil
+	}
+
 	if content, err := b.renderReport(); err == nil {
 		letter := email.Letter{
-			Subject:  fmt.Sprintf("%s [%s]", b.config.Email.Subject, render.GetStatusPreview(b.status)) ,
+			Subject:  fmt.Sprintf("%s [%s]", b.config.Email.Subject, render.GetStatusPreview(b.status)),
 			From:     b.config.Email.User,
 			FromName: b.config.Email.SenderName,
 			To:       b.config.Email.Recivers,
@@ -62,7 +67,7 @@ func (b *BackupProcess) renderReport() ([]byte, error) {
 	b.countSetStatus(&report)
 	b.copyBuildInStructToReport(&report)
 
-	return render.RenderReport(report, b.config.App.Folders.Templates)
+	return render.RenderReport(report, b.config.App.Templates)
 }
 
 func (b *BackupProcess) countSetStatus(report *render.BackupReport) {
@@ -85,6 +90,8 @@ func (b *BackupProcess) countSetStatus(report *render.BackupReport) {
 
 func (b *BackupProcess) copyBuildInStructToReport(report *render.BackupReport) {
 	report.Date = b.date.Format("Monday, 02 January 2006")
+	gb := 1024 * 1024 * 1024
+	mb := 1024 * 1024
 	for _, t := range b.tasks {
 		nt := render.Task{}
 		nt.Name = t.Name
@@ -96,18 +103,18 @@ func (b *BackupProcess) copyBuildInStructToReport(report *render.BackupReport) {
 			} else {
 				ni.Name = i.File
 			}
-
 			ni.OID = i.OID
 			ni.StartTime = i.StartTime.Format("03:04:05")
 			ni.FinishTime = i.FinishTime.Format("03:04:05")
 			ni.Status = i.Status
 			ni.BackupPath = i.BackupPath
-			if i.BackupSize > (1024 * 1024 * 1024) {
-				ni.BackupSize = fmt.Sprintf("%.2dGB", (i.BackupSize / 1024 / 1024 / 1024))
-				ni.DatabaseSize = fmt.Sprintf("%.2dGB", (i.DatabaseSize / 1024 / 1024 / 1024))
+
+			if i.BackupSize > int64(gb) {
+				ni.BackupSize = fmt.Sprintf("%.2fGB", float64(i.BackupSize)/float64(gb))
+				ni.DatabaseSize = fmt.Sprintf("%.2fGB", float64(i.DatabaseSize)/float64(gb))
 			} else {
-				ni.BackupSize = fmt.Sprintf("%.2dMB", (i.BackupSize / 1024 / 1024))
-				ni.DatabaseSize = fmt.Sprintf("%.2dMB", (i.DatabaseSize / 1024 / 1024))
+				ni.BackupSize = fmt.Sprintf("%.2fMB", float64(i.BackupSize)/float64(mb))
+				ni.DatabaseSize = fmt.Sprintf("%.2fMB", float64(i.DatabaseSize)/float64(mb))
 			}
 			ni.Details = i.Details
 
@@ -119,14 +126,10 @@ func (b *BackupProcess) copyBuildInStructToReport(report *render.BackupReport) {
 
 func NewBackupProcess(conf config.Config) (*BackupProcess, error) {
 
-	b := BackupProcess{
-		config: conf,
-	}
+	b := BackupProcess{config: conf}
 
-	DatabaseLocation = conf.Postgres.DataLocation
-	LogsErrors = make([]string, 0, 2)
-	LogsErrors = append(LogsErrors, "pg_dump: ошибка:")
-	LogsErrors = append(LogsErrors, "pg_dump: error:")
+	DatabaseLocation = conf.DataLocation
+	LogsErrors = getPGDumpErrorEvents()
 
 	PGConnectionConfig = psql.ConnectionConfig{
 		User:     conf.Postgres.User,
@@ -134,9 +137,6 @@ func NewBackupProcess(conf config.Config) (*BackupProcess, error) {
 		Database: psql.Database{Name: "postgres"},
 		SSlMode:  false,
 	}
-
-	os.Setenv("PGUSER", PGConnectionConfig.Name)
-	os.Setenv("PGPASSWORD", PGConnectionConfig.Password)
 
 	b.date = time.Now()
 	tasks, err := CreateTaskBySchedules(conf.Schedule)
@@ -148,4 +148,11 @@ func NewBackupProcess(conf config.Config) (*BackupProcess, error) {
 	b.sender = conf.GetSender()
 
 	return &b, nil
+}
+
+func getPGDumpErrorEvents() []string {
+	logs := make([]string, 0, 2)
+	logs = append(LogsErrors, "pg_dump: ошибка:")
+	logs = append(LogsErrors, "pg_dump: error:")
+	return logs
 }

@@ -2,6 +2,7 @@ app:
   folders:
     templates: C:\maintenance\vspg\assets\templates
     queries: C:\maintenance\vspg\assets\sql
+    envfile: C:\maintenance\vspg\env
 postgres:
   user: postgres
   password: 2j7hw{Bhq#DR2zC*P~wMa2@n7

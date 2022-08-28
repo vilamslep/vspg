@@ -8,11 +8,37 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Config struct {
+	App      `yaml:"app"`
+	Postgres `yaml:"postgres"`
+	Folder   `yaml:"target_folder"`
+	Utils    `yaml:"utils"`
+	Email    `yaml:"email"`
+	Schedule `yaml:"schedules"`
+}
+
 type App struct {
-	Folders struct {
-		Templates string `yaml:"templates"`
-		Queries string `yaml:"queries"`
-	} `yaml:"folders"`
+	SettingsFolders `yaml:"folders"`
+}
+
+type Postgres struct {
+	User         string `yaml:"user"`
+	Password     string `yaml:"password"`
+	Host         string `yaml:"host"`
+	Port         int    `yaml:"port"`
+	DataLocation string `yaml:"data_location"`
+}
+
+type Folder struct {
+	Path     string `yaml:"path"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+}
+
+type Utils struct {
+	Dump     string `yaml:"dump"`
+	Psql     string `yaml:"psql"`
+	Compress string `yaml:"compress"`
 }
 
 type Email struct {
@@ -25,38 +51,16 @@ type Email struct {
 	Letter     `yaml:"letter"`
 }
 
+type SettingsFolders struct {
+	Templates string `yaml:"templates"`
+	Queries   string `yaml:"queries"`
+	Envfile   string `yaml:"envfile"`
+}
+
 type Letter struct {
 	Subject string `yaml:"subject"`
 }
 
-type Config struct {
-	App      `yaml:"app"`
-	Postgres `yaml:"postgres"`
-	Folder   `yaml:"target_folder"`
-	Utils    `yaml:"utils"`
-	Email    `yaml:"email"`
-	Schedule `yaml:"schedules"`
-}
-
-type Folder struct {
-	Path string `yaml:"path"`
-	User string `yaml:"user"`
-	Password string	`yaml:"password"`
-}
-
-type Postgres struct {
-	User string `yaml:"user"`
-	Password string `yaml:"password"`
-	Host string `yaml:"host"`
-	Port int `yaml:"port"`
-	DataLocation string	`yaml:"data_location"`
-}
-
-type Utils struct {
-	Dump string `yaml:"dump"`
-	Psql string `yaml:"psql"`
-	Compress string `yaml:"compress"`
-}
 
 func (c Config) GetSender() notice.Sender {
 	return email.NewSmptClient(

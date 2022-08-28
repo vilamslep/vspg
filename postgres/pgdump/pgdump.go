@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"os/exec"
 
-	vos "github.com/vilamslep/vspg/os"
+	v "github.com/vilamslep/vspg/os"
 )
 
 var (
@@ -13,14 +13,19 @@ var (
 
 func Dump(db string, dst string, excludedTables []string) (stdout bytes.Buffer, stderr bytes.Buffer, err error) {
 
-	cmd := exec.Command(PGDumpExe, "--format", "directory", "--no-password", "--jobs", "4",
-		"--blobs", "--encoding", "UTF8", "--verbose", "--file", dst, "--dbname", db)
+	cmd := exec.Command(PGDumpExe, 
+		"--format", "directory", "--no-password", 
+		"--jobs", "4", "--blobs", 
+		"--encoding", "UTF8", 
+		"--verbose", "--file", dst, 
+		"--dbname", db)
+	
 	excludingArgs(cmd, excludedTables)
 
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 
-	err = vos.ExecCommand(cmd)
+	err = v.ExecCommand(cmd)
 
 	return stdout, stderr, err
 }

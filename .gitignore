@@ -2,3 +2,4 @@
 setting.yaml
 *.log
 *.exe
+*env

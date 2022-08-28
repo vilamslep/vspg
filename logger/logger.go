@@ -30,16 +30,19 @@ func init() {
 	fileName := "zap.log"
 	level := getLoggerLevel("debug")
 	syncWriter := zapcore.AddSync(&lumberjack.Logger{
-		Filename:  fileName,
-		MaxSize:   (1024 * 1024 * 20),
-		LocalTime: true,
-		Compress:  true,
+		Filename:   fileName,
+		MaxSize:    100,
+		LocalTime:  true,
+		Compress:   true,
+		MaxBackups: 10,
+		MaxAge:     30,
 	})
 	encoder := zap.NewProductionEncoderConfig()
 	encoder.EncodeTime = zapcore.ISO8601TimeEncoder
 	core := zapcore.NewCore(zapcore.NewJSONEncoder(encoder), syncWriter, zap.NewAtomicLevelAt(level))
 	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1))
 	errorLogger = logger.Sugar()
+
 }
 
 func Debug(args ...interface{}) {

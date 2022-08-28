@@ -71,30 +71,30 @@ func (i *Item) fileBackup(targetDir string) (err error) {
 	i.setDatabaseSize()
 
 	logger.Debug("checking space in target directory")
-	if ok, err := i.checkSpace(targetDir); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("%s doesn't have enough space. Db %s. Size %d", targetDir, i.Name, i.DatabaseSize)
-	} else {
-		logger.Debug("success")
+	{
+		if ok, err := i.checkSpace(targetDir); err != nil {
+			return err
+		} else if !ok {
+			return fmt.Errorf("%s doesn't have enough space. Db %s. Size %d", targetDir, i.Name, i.DatabaseSize)
+		}
 	}
-
-	dstName := filepath.Base(i.File)
 	logger.Debug("coping backup to target directory")
-	i.BackupPath = fmt.Sprintf("%s\\%s", targetDir, dstName)
-	if err := fs.CreateIfNotExists(i.BackupPath); err != nil {
-		return err
-	}
-
-	if err := fs.Copy(i.File, i.BackupPath); err == nil {
-		i.BackupSize, err = fs.GetSize(i.BackupPath)
-		if err != nil {
+	{
+		dstName := filepath.Base(i.File)
+		i.BackupPath = fmt.Sprintf("%s\\%s", targetDir, dstName)
+		if err := fs.CreateIfNotExists(i.BackupPath); err != nil {
 			return err
 		}
-	} else {
-		return err
+
+		if err := fs.Copy(i.File, i.BackupPath); err == nil {
+			i.BackupSize, err = fs.GetSize(i.BackupPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
-	logger.Debug("success")
 
 	return nil
 }
@@ -110,24 +110,13 @@ func (i *Item) pgBackup(tempDir string, targetDir string) (err error) {
 	i.StartTime = time.Now()
 	i.setDatabaseSize()
 
-	logger.Debug("checking space in template directory")
-
-	if ok, err := i.checkSpace(tempDir); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("%s doesn't have enough space. Db %s. Size %d", tempDir, i.Name, i.DatabaseSize)
-	} else {
-		logger.Debug("success")
+	logger.Debug("checking free space")
+	{
+		if err := i.checkingFreeSpace(tempDir, targetDir); err != nil {
+			return err
+		}
 	}
 
-	logger.Debug("checking space in target directory")
-	if ok, err := i.checkSpace(targetDir); err != nil {
-		return err
-	} else if !ok {
-		return fmt.Errorf("%s doesn't have enough space. Db %s. Size %d", targetDir, i.Name, i.DatabaseSize)
-	} else {
-		logger.Debug("success")
-	}
 	chdir := make([]string, 0, 2)
 	chdir = append(chdir, "logical")
 	nc := PGConnectionConfig
@@ -146,53 +135,67 @@ func (i *Item) pgBackup(tempDir string, targetDir string) (err error) {
 	if err != nil {
 		return err
 	}
-	logger.Debug("start dumping")
-	if err := i.dump(locations["logical"], excludeTabls); err != nil {
-		return err
+	logger.Debug("dumping")
+	{
+		if err := i.dump(locations["logical"], excludeTabls); err != nil {
+			return err
+		}
 	}
-	logger.Debug("success")
 
 	if len(excludeTabls) > 0 {
-		logger.Debug("uploading binary data")
-		if biniriesFiles, err := i.unloadBinaryTable(locations["binary"], excludeTabls); err == nil {
-			err := i.writeRestoreFile(locations["main"], biniriesFiles)
+		logger.Debug("upload %s as binary data", strings.Join(excludeTabls, ","))
+		{
+			biniriesFiles, err := i.unloadBinaryTable(locations["binary"], excludeTabls)
 			if err != nil {
 				return err
 			}
-		} else {
-			return err
+
+			if err := i.writeRestoreFile(locations["main"], biniriesFiles); err != nil {
+				return err
+			}
 		}
 	}
+
 	pathBackDb := locations["main"]
 	archive := fmt.Sprintf("%s.zip", pathBackDb)
 	logger.Debug("compressing")
-	if err := fs.Compress(pathBackDb, archive); err != nil {
-		return err
+	{
+		if err := fs.Compress(pathBackDb, archive); err != nil {
+			return err
+		}
 	}
-	logger.Debug("success")
 
 	logger.Debug("coping backup to target directory")
-	dstName := filepath.Base(archive)
-	i.BackupPath = fmt.Sprintf("%s\\%s", targetDir, dstName)
-	if err := fs.Copy(archive, i.BackupPath); err == nil {
-		i.BackupSize, err = fs.GetSize(i.BackupPath)
+	{
+		dstName := filepath.Base(archive)
+		i.BackupPath = fmt.Sprintf("%s\\%s", targetDir, dstName)
+		err := fs.Copy(archive, i.BackupPath)
 		if err != nil {
 			return err
 		}
-	} else {
-		return err
+
+		if i.BackupSize, err = fs.GetSize(i.BackupPath); err != nil {
+			return err
+		}
 	}
 
-	logger.Debug("success")
 	logger.Debug("removing temp files")
-	if err := fs.Remove(pathBackDb); err != nil {
-		return err
+	{
+		if err := fs.Remove(pathBackDb, archive); err != nil {
+			return err
+		}
 	}
-	if err := fs.Remove(archive); err != nil {
-		return err
-	}
-	logger.Debug("success")
+	return nil
+}
 
+func (i *Item) checkingFreeSpace(path ...string) error {
+	for _, target := range path {
+		if ok, err := i.checkSpace(target); err != nil {
+			return err
+		} else if !ok {
+			return fmt.Errorf("%s doesn't have enough space. Db %s. Size %d", target, i.Name, i.DatabaseSize)
+		}
+	}
 	return nil
 }
 
@@ -223,7 +226,6 @@ func (i *Item) setDatabaseSize() error {
 		}
 	}
 	return nil
-
 }
 
 func (i *Item) dump(lpath string, excludeTabls []string) error {
