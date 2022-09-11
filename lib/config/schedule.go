@@ -29,13 +29,15 @@ type Schedule struct {
 }
 
 type ScheduleItem struct {
-	Dbs       []string `yaml:"dbs"`
-	Files     []string `yaml:"files"`
-	KeepCount int      `yaml:"keep_count"`
-	Repeat    []int    `yaml:"repeat"`
-	Kind      int
-	Today     time.Time
-	Weekend   []int
+	Dbs        []string `yaml:"dbs"`
+	Files      []string `yaml:"files"`
+	KeepCount  int      `yaml:"keep_count"`
+	Repeat     []int    `yaml:"repeat"`
+	Kind       int
+	BucketName string `yaml:"bucket_name"`
+	BucketRoot string `yaml:"bucket_root"`
+	Today      time.Time
+	Weekend    []int
 }
 
 func (si ScheduleItem) Empty() bool {

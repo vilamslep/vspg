@@ -132,8 +132,8 @@ func NewBackupProcess(conf config.Config) (*BackupProcess, error) {
 	LogsErrors = getPGDumpErrorEvents()
 
 	PGConnectionConfig = psql.ConnectionConfig{
-		User:     conf.Postgres.User,
-		Password: conf.Postgres.Password,
+		User:     conf.GetUser(),
+		Password: conf.GetPassword(),
 		Database: psql.Database{Name: "postgres"},
 		SSlMode:  false,
 	}

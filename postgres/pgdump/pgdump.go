@@ -13,13 +13,13 @@ var (
 
 func Dump(db string, dst string, excludedTables []string) (stdout bytes.Buffer, stderr bytes.Buffer, err error) {
 
-	cmd := exec.Command(PGDumpExe, 
-		"--format", "directory", "--no-password", 
-		"--jobs", "4", "--blobs", 
-		"--encoding", "UTF8", 
-		"--verbose", "--file", dst, 
+	cmd := exec.Command(PGDumpExe,
+		"--format", "directory", "--no-password",
+		"--jobs", "4", "--blobs",
+		"--encoding", "UTF8",
+		"--verbose", "--file", dst,
 		"--dbname", db)
-	
+
 	excludingArgs(cmd, excludedTables)
 
 	cmd.Stderr = &stderr

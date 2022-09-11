@@ -22,11 +22,23 @@ type App struct {
 }
 
 type Postgres struct {
-	User         string `yaml:"user"`
-	Password     string `yaml:"password"`
-	Host         string `yaml:"host"`
-	Port         int    `yaml:"port"`
 	DataLocation string `yaml:"data_location"`
+}
+
+func (p Postgres) GetUser() string {
+	return os.Getenv("PGUSER")
+}
+
+func (p Postgres) GetPassword() string {
+	return os.Getenv("PGPASSWORD")
+}
+
+func (p Postgres) GetServer() string {
+	return os.Getenv("PGHOST")
+}
+
+func (p Postgres) GetPort() string {
+	return os.Getenv("PGPORT")
 }
 
 type Folder struct {

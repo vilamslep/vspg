@@ -116,11 +116,11 @@ func createConnection(pgConf ConnectionConfig) (*sql.DB, error) {
 }
 
 func CopyBinary(db string, src string, dst string) (err error) {
-	command := fmt.Sprintf("COPY %s TO '%s' WITH BINARY;", src, dst)
-	cmd := exec.Command(PsqlExe, "--username", "postgres", "--dbname", db, "--command", command)
-
 	var stderr bytes.Buffer
 
+	command := fmt.Sprintf("COPY %s TO '%s' WITH BINARY;", src, dst)
+	cmd := exec.Command(PsqlExe, "--dbname", db, "--command", command)
+	
 	cmd.Stderr = &stderr
 
 	if err := vos.ExecCommand(cmd); err != nil {
