@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vilamslep/vspg/lib/config"
+	"github.com/vilamslep/vspg/cloud/yandex"
 	"github.com/vilamslep/vspg/lib/fs"
 	"github.com/vilamslep/vspg/logger"
 	"github.com/vilamslep/vspg/postgres/pgdump"
@@ -39,7 +39,8 @@ type Item struct {
 	BackupSize   int64
 	BackupPath   string
 	Details      string
-	config       config.Config
+	BucketName string
+	BucketRoot string
 	Type         int
 }
 
@@ -178,6 +179,20 @@ func (i *Item) pgBackup(tempDir string, targetDir string) (err error) {
 			return err
 		}
 	}
+
+	if i.BucketName != "" && i.BucketRoot != ""  {
+		logger.Debug("coping backup to cloud storage")
+		{
+			if s3client, err := yandex.NewClient(i.BucketRoot); err == nil {
+				if err := s3client.Add(archive, i.BucketName); err != nil {
+					return err
+				}
+			} else if err != yandex.ErrLoadingConfiguration {
+				return err
+			}
+		}
+	}
+	
 
 	logger.Debug("removing temp files")
 	{

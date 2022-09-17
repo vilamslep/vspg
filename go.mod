@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.27.9
 	github.com/lib/pq v1.10.6
 	github.com/pkg/errors v0.9.1
+	github.com/spf13/pflag v1.0.5
 	go.uber.org/zap v1.21.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )

@@ -29,7 +29,7 @@ type Schedule struct {
 }
 
 type ScheduleItem struct {
-	Dbs        []string `yaml:"dbs"`
+	Databases        []string `yaml:"dbs"`
 	Files      []string `yaml:"files"`
 	KeepCount  int      `yaml:"keep_count"`
 	Repeat     []int    `yaml:"repeat"`

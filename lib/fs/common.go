@@ -7,9 +7,7 @@ import (
 	"strings"
 )
 
-const (
-	WIN_OS_PROGDATA = "C:\\Temp\\postgres.backup"
-)
+var WIN_OS_PROGDATA string
 
 func GetSize(path string) (int64, error) {
 	if file, err := os.Open(path); err == nil {

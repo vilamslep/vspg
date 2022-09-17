@@ -25,12 +25,14 @@ type Client struct {
 	cloudRoot string
 }
 
-func NewClient(root string) *Client {
+var ErrLoadingConfiguration = fmt.Errorf("Failed to load cloud configuration") 
+
+func NewClient(root string) (*Client, error) {
 	customResolver := aws.EndpointResolverWithOptionsFunc(yandexResolver)
 
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithEndpointResolverWithOptions(customResolver))
 	if err != nil {
-		panic("Failed to load configuration")
+		return nil, ErrLoadingConfiguration
 	}
 
 	s3client := s3.NewFromConfig(cfg)
@@ -45,7 +47,7 @@ func NewClient(root string) *Client {
 		cloudRoot: root, 
 		cloudSep: "/",	
 		osSep: osSep,
-	}
+	}, nil
 }
 
 func (c Client) Add(src string, bucket string) error {
@@ -70,8 +72,9 @@ func (c Client) Add(src string, bucket string) error {
 	}
 }
 
-func (c Client) KeepNecessaryQuantity(keepCount int) error {
+func (c Client) KeepNecessaryQuantity(bucket string, keepCount int) error {
 	
+	c.bucketName = bucket
 	folders, err := c.getFoldesSlice()
 	if err != nil {
 		return err

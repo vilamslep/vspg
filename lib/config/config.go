@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	App      `yaml:"app"`
-	Postgres `yaml:"postgres"`
+	Postgres 
 	Folder   `yaml:"target_folder"`
 	Utils    `yaml:"utils"`
 	Email    `yaml:"email"`
@@ -21,9 +21,7 @@ type App struct {
 	SettingsFolders `yaml:"folders"`
 }
 
-type Postgres struct {
-	DataLocation string `yaml:"data_location"`
-}
+type Postgres struct{}
 
 func (p Postgres) GetUser() string {
 	return os.Getenv("PGUSER")
@@ -39,6 +37,10 @@ func (p Postgres) GetServer() string {
 
 func (p Postgres) GetPort() string {
 	return os.Getenv("PGPORT")
+}
+
+func (p Postgres) GetDataLocation() string {
+	return os.Getenv("PGDATA")
 }
 
 type Folder struct {
@@ -65,8 +67,7 @@ type Email struct {
 
 type SettingsFolders struct {
 	Templates string `yaml:"templates"`
-	Queries   string `yaml:"queries"`
-	Envfile   string `yaml:"envfile"`
+	TempPath string `yaml:"tempate_place"`
 }
 
 type Letter struct {

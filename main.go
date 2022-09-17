@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
-	
+	"runtime"
+
+	"github.com/spf13/pflag"
 	"github.com/vilamslep/vspg/lib/backup"
 	"github.com/vilamslep/vspg/lib/config"
 	"github.com/vilamslep/vspg/lib/fs"
@@ -12,54 +13,97 @@ import (
 	"github.com/vilamslep/vspg/postgres/psql"
 )
 
+//cmd args
 var (
-	tAllDBs      string = "all_databases.sql"
-	tSearchDbs   string = "search_database.sql"
-	tLargeTables string = "large_tables.sql"
+	envfile string
+	settingFile string
+	showHelp bool
 )
 
 func main() {
-	c, err := config.LoadSetting("setting.yaml")
+
+	if runtime.GOOS != "windows" {
+		logger.Fatal("application is supported only windows OS.")
+	}
+
+	setAndParseFlags()
+	
+	if showHelp {
+		pflag.Usage()
+		return
+	}
+
+	if err := checkArgs(); err != nil {
+		logger.Fatal(err)
+	}
+
+	c, err := config.LoadSetting(settingFile)
 	if err != nil {
 		logger.Fatalf("loading config is failed. %v", err)
 	}
 
-	initModules(c)
-
-	b, err := backup.NewBackupProcess(c)
-	if err != nil {
-		logger.Fatalf("creating backup process is failed. %v", err)
+	if err := initModules(c); err != nil {
+		logger.Fatalf("module initing is falled; %v", err)
 	}
 
-	b.Run()
+	if b, err := backup.NewBackupProcess(c); err == nil {
+		b.Run()
+	} else {
+		logger.Fatalf("creating backup process is failed. %v", err)
+	}
 }
 
-func initModules(conf config.Config) {
-	var err error
-
+func initModules(conf config.Config) error {
 	psql.PsqlExe = conf.Psql
 	pgdump.PGDumpExe = conf.Dump
 	fs.CompressExe = conf.Compress
+	fs.WIN_OS_PROGDATA = conf.TempPath
 
-	fs.LoadEnvfile(conf.Envfile)
+	setQueriesText()
 
-	if conf.Queries != "" {
-		if psql.AllDatabasesTxt, err = exportQueryFromFile(fmt.Sprintf("%s\\%s", conf.Queries, tAllDBs)); err != nil {
-			logger.Fatal(err)
-		}
-		if psql.SearchDatabases, err = exportQueryFromFile(fmt.Sprintf("%s\\%s", conf.Queries, tSearchDbs)); err != nil {
-			logger.Fatal(err)
-		}
-		if psql.LargeTablesTxt, err = exportQueryFromFile(fmt.Sprintf("%s\\%s", conf.Queries, tLargeTables)); err != nil {
-			logger.Fatal(err)
-		}
+	if err := fs.LoadEnvfile(envfile); err != nil {
+		return err
 	}
+
+	return nil
 }
 
-func exportQueryFromFile(path string) (string, error) {
-	if t, err := ioutil.ReadFile(path); err == nil {
-		return string(t), err
-	} else {
-		return "", fmt.Errorf("can't read file %s, %v", path, err)
+func setQueriesText() {
+	psql.AllDatabasesTxt = `SELECT datname, oid FROM pg_database WHERE NOT datname IN ('postgres', 'template1', 'template0')`
+	psql.SearchDatabases = `SELECT datname, oid FROM pg_database WHERE datname IN ($1)`
+
+	psql.LargeTablesTxt = `SELECT table_name as name
+		FROM (
+			SELECT table_name,pg_total_relation_size(table_name) AS total_size
+			FROM (
+				SELECT (table_schema || '.' || table_name) AS table_name 
+				FROM information_schema.tables) AS all_tables 
+				ORDER BY total_size DESC
+				) AS pretty_sizes 
+		WHERE total_size > 4294967296;`
+}
+
+func setAndParseFlags() {
+	pflag.BoolVarP(&showHelp, "help", "",
+		false,
+		"Print help message")
+	pflag.StringVarP(&settingFile, "setting", "s",
+		"",
+		"File common setting")
+	pflag.StringVarP(&envfile, "env", "e",
+		"",
+		"File with enviroment variables")
+
+	pflag.Parse()
+}
+
+func checkArgs() error {
+	if settingFile == "" {
+		return fmt.Errorf("not defined setting file")
+	} 
+
+	if envfile == "" {
+		return fmt.Errorf("not defined enviroment file")
 	}
+	return nil
 }

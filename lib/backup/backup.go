@@ -31,11 +31,9 @@ func (b *BackupProcess) Run() {
 
 	for _, t := range b.tasks {
 		logger.Infof("handling of %s", config.GetKindPrewiew(t.Kind))
-
 		if err := t.Run(b.config); err != nil {
 			logger.Errorf("handling task is failed. %v", err)
 		}
-
 	}
 
 	if err := b.sendNotification(); err != nil {
@@ -128,7 +126,7 @@ func NewBackupProcess(conf config.Config) (*BackupProcess, error) {
 
 	b := BackupProcess{config: conf}
 
-	DatabaseLocation = conf.DataLocation
+	DatabaseLocation = conf.GetDataLocation()
 	LogsErrors = getPGDumpErrorEvents()
 
 	PGConnectionConfig = psql.ConnectionConfig{
@@ -151,8 +149,8 @@ func NewBackupProcess(conf config.Config) (*BackupProcess, error) {
 }
 
 func getPGDumpErrorEvents() []string {
-	logs := make([]string, 0, 2)
-	logs = append(LogsErrors, "pg_dump: ошибка:")
-	logs = append(LogsErrors, "pg_dump: error:")
-	return logs
+	return []string{
+		"pg_dump: ошибка:",
+		"pg_dump: error:",
+	}
 }

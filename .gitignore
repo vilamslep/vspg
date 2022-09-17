@@ -1,5 +1,5 @@
 .vscode
-setting.yaml
+*.yaml
 *.log
 *.exe
 *env

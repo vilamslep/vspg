@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/vilamslep/vspg/cloud/yandex"
 	"github.com/vilamslep/vspg/lib/config"
 	"github.com/vilamslep/vspg/lib/fs"
 	"github.com/vilamslep/vspg/logger"
@@ -16,6 +17,8 @@ type Task struct {
 	Kind      int
 	Items     []*Item
 	KeepCount int
+	BucketName string
+	BucketRoot string
 }
 
 func (t *Task) Run(config config.Config) (err error) {
@@ -27,8 +30,7 @@ func (t *Task) Run(config config.Config) (err error) {
 	if rpath, err = fs.GetRootDir(config.Folder.Path, t.Name, t.Kind); err != nil {
 		return err
 	}
-	logger.Infof("temp directory is %s", tmpath)
-	logger.Infof("root directory is %s", rpath)
+	logger.Infof("temp directory is %s, root directory is %s", tmpath, rpath)
 
 	for _, item := range t.Items {
 		logger.Infof("start handlind '%s'", item.Database.Name)
@@ -45,6 +47,19 @@ func (t *Task) Run(config config.Config) (err error) {
 		return err
 	}
 
+	logger.Info("removing old copies in cloud")
+
+	s3client, err := yandex.NewClient(t.BucketRoot)
+	if err != nil {
+		if err == yandex.ErrLoadingConfiguration {
+			logger.Error(err)
+		}
+	} else {
+		if err := s3client.KeepNecessaryQuantity(t.BucketName, t.KeepCount); err != nil {
+			return err
+		}
+	}
+	
 	return nil
 }
 
@@ -62,23 +77,25 @@ func (t *Task) CountStatuses() (cerr int, cwarn int, csuc int) {
 	return
 }
 
-func NewTask(name string, kind int, dbs []string, files []string, keepCount int) (*Task, error) {
+func NewTask(schItem config.ScheduleItem) (*Task, error) {
 	t := Task{
-		Name:      name,
-		Kind:      kind,
-		KeepCount: keepCount,
+		Name:      config.GetKindPrewiew(schItem.Kind),
+		Kind:      schItem.Kind,
+		KeepCount: schItem.KeepCount,
+		BucketName: schItem.BucketName,
+		BucketRoot: schItem.BucketRoot,
 	}
 
-	if len(dbs) > 0 || len(files) > 0 {
-		if len(dbs) > 0 {
-			err := t.appendPgDbs(dbs)
+	if len(schItem.Databases) > 0 || len(schItem.Files) > 0 {
+		if len(schItem.Databases) > 0 {
+			err := t.appendDatabases(schItem.Databases)
 			if err != nil {
 				return &t, err
 			}
 		}
 
-		if len(files) > 0 {
-			t.appendFiles(files)
+		if len(schItem.Files) > 0 {
+			t.appendFiles(schItem.Files)
 		}
 
 		return &t, nil
@@ -87,12 +104,15 @@ func NewTask(name string, kind int, dbs []string, files []string, keepCount int)
 	}
 }
 
-func (t *Task) appendPgDbs(dbs []string) error {
-	if dbsInServer, err := psql.Databases(PGConnectionConfig, dbs); err == nil {
-		dbsInServer = addNotFoundDatabases(dbs, dbsInServer)
+func (t *Task) appendDatabases(dbs []string) error {
 
-		for _, db := range dbsInServer {
+	if databasesInServer, err := psql.Databases(PGConnectionConfig, dbs); err == nil {
+		databasesInServer = addNotFoundDatabases(dbs, databasesInServer)
+
+		for _, db := range databasesInServer {
 			item := NewItem(POSTGRES, db, "")
+			item.BucketName = t.BucketName
+			item.BucketRoot = t.BucketRoot + "/" + time.Now().Format("02-01-2006")
 			t.Items = append(t.Items, &item)
 		}
 	} else {
@@ -126,32 +146,22 @@ func addNotFoundDatabases(dbs []string, dbsInServer []psql.Database) []psql.Data
 }
 
 func CreateTaskBySchedules(schedules config.Schedule) ([]Task, error) {
-
 	tasks := make([]Task, 0, 3)
-	if daily, exist, err := createTask(schedules.Daily); err == nil {
-		if exist {
-			tasks = append(tasks, daily)
-		}
-	} else {
-		return nil, err
+	
+	sch := []config.ScheduleItem{
+		schedules.Daily,
+		schedules.Weekly,
+		schedules.Monthly,
 	}
 
-	if weekly, exist, err := createTask(schedules.Weekly); err == nil {
-		if exist {
-			tasks = append(tasks, weekly)
+	for _, it := range sch {
+		if task, exist, err := createTask(it); err == nil && exist {
+			tasks = append(tasks, task)
+		} else if err != nil {
+			return nil, err
 		}
-
-	} else {
-		return nil, err
 	}
-
-	if monthly, exist, err := createTask(schedules.Monthly); err == nil {
-		if exist {
-			tasks = append(tasks, monthly)
-		}
-	} else {
-		return nil, err
-	}
+	
 	return tasks, nil
 }
 
@@ -162,14 +172,11 @@ func createTask(sch config.ScheduleItem) (t Task, ok bool, err error) {
 	sch.Today = time.Now()
 
 	if sch.NeedToRun() {
-
-		name := config.GetKindPrewiew(sch.Kind)
-		if t, err := NewTask(name, sch.Kind, sch.Dbs, sch.Files, sch.KeepCount); err == nil {
+		if t, err := NewTask(sch); err == nil {
 			return *t, true, nil
 		} else {
 			return Task{}, false, err
 		}
-
 	} else {
 		return
 	}
