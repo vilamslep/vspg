@@ -35,7 +35,7 @@ func (t *Task) Run(config config.Config) (err error) {
 	for _, item := range t.Items {
 		logger.Infof("start handlind '%s'", item.Database.Name)
 		if err := item.ExecuteBackup(tmpath, rpath); err == nil {
-			logger.Info("finish handling '%s'", item.Database.Name)
+			logger.Infof("finish handling '%s'", item.Database.Name)
 		} else {
 			logger.Errorf("handling database '%s' is failed. %v", item.Database.Name, err)
 		}
