@@ -25,7 +25,7 @@ type Client struct {
 	cloudRoot string
 }
 
-var ErrLoadingConfiguration = fmt.Errorf("Failed to load cloud configuration") 
+var ErrLoadingConfiguration = fmt.Errorf("failed to load cloud configuration") 
 
 func NewClient(root string) (*Client, error) {
 	customResolver := aws.EndpointResolverWithOptionsFunc(yandexResolver)
@@ -132,7 +132,7 @@ func (c Client) getFoldesSlice() ([]cloud.S3Folder, error) {
 	dirs := make(map[string]time.Time, 0)
 	for k, v := range files {
 		path := strings.Split(k, "/")
-		dirs[path[1]] = v
+		dirs[path[len(path)-2]] = v
 	}
 
 	folders := make([]cloud.S3Folder, 0, len(dirs))

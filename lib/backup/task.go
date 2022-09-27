@@ -13,10 +13,10 @@ import (
 )
 
 type Task struct {
-	Name      string
-	Kind      int
-	Items     []*Item
-	KeepCount int
+	Name       string
+	Kind       int
+	Items      []*Item
+	KeepCount  int
 	BucketName string
 	BucketRoot string
 }
@@ -59,7 +59,7 @@ func (t *Task) Run(config config.Config) (err error) {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -79,9 +79,9 @@ func (t *Task) CountStatuses() (cerr int, cwarn int, csuc int) {
 
 func NewTask(schItem config.ScheduleItem) (*Task, error) {
 	t := Task{
-		Name:      config.GetKindPrewiew(schItem.Kind),
-		Kind:      schItem.Kind,
-		KeepCount: schItem.KeepCount,
+		Name:       config.GetKindPrewiew(schItem.Kind),
+		Kind:       schItem.Kind,
+		KeepCount:  schItem.KeepCount,
 		BucketName: schItem.BucketName,
 		BucketRoot: schItem.BucketRoot,
 	}
@@ -147,7 +147,7 @@ func addNotFoundDatabases(dbs []string, dbsInServer []psql.Database) []psql.Data
 
 func CreateTaskBySchedules(schedules config.Schedule) ([]Task, error) {
 	tasks := make([]Task, 0, 3)
-	
+
 	sch := []config.ScheduleItem{
 		schedules.Daily,
 		schedules.Weekly,
@@ -161,7 +161,7 @@ func CreateTaskBySchedules(schedules config.Schedule) ([]Task, error) {
 			return nil, err
 		}
 	}
-	
+
 	return tasks, nil
 }
 
