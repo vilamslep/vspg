@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/spf13/pflag"
 	"github.com/vilamslep/vspg/internal/backup"
@@ -19,8 +19,14 @@ var (
 	showHelp bool
 )
 
-func main() {
+//errors
+var (
+	configErr error = errors.New("not defined setting file")
+	envErr error = errors.New("not defined enviroment file")
+)
 
+func main() {
+	
 	setAndParseFlags()
 	
 	if showHelp {
@@ -64,17 +70,20 @@ func initModules(conf config.Config) error {
 }
 
 func setQueriesText() {
-	psql.AllDatabasesTxt = `SELECT datname, oid FROM pg_database WHERE NOT datname IN ('postgres', 'template1', 'template0')`
-	psql.SearchDatabases = `SELECT datname, oid FROM pg_database WHERE datname IN ($1)`
+	psql.AllDatabasesTxt = `
+		SELECT datname, oid 
+		FROM pg_database 
+		WHERE NOT datname IN ('postgres', 'template1', 'template0')`
+	
+	psql.SearchDatabases = `
+		SELECT datname, oid 
+		FROM pg_database WHERE datname IN ($1)`
 
-	psql.LargeTablesTxt = `SELECT table_name as name
-		FROM (
-			SELECT table_name,pg_total_relation_size(table_name) AS total_size
-			FROM (
-				SELECT (table_schema || '.' || table_name) AS table_name 
-				FROM information_schema.tables) AS all_tables 
-				ORDER BY total_size DESC
-				) AS pretty_sizes 
+	psql.LargeTablesTxt = `
+		SELECT table_name as name 
+		FROM (SELECT table_name,pg_total_relation_size(table_name) AS total_size
+				FROM (SELECT (table_schema || '.' || table_name) AS table_name FROM information_schema.tables) AS all_tables 
+				ORDER BY total_size DESC) AS pretty_sizes 
 		WHERE total_size > 4294967296;`
 }
 
@@ -94,11 +103,11 @@ func setAndParseFlags() {
 
 func checkArgs() error {
 	if settingFile == "" {
-		return fmt.Errorf("not defined setting file")
+		return configErr
 	} 
 
 	if envfile == "" {
-		return fmt.Errorf("not defined enviroment file")
+		return envErr
 	}
 	return nil
 }

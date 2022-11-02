@@ -74,7 +74,6 @@ type Letter struct {
 	Subject string `yaml:"subject"`
 }
 
-
 func (c Config) GetSender() notice.Sender {
 	return email.NewSmptClient(
 		c.Email.User,
