@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	_ "github.com/lib/pq"
-	vos "github.com/vilamslep/vspg/os"
+	vsOs "github.com/vilamslep/vspg/pkg/os"
 )
 
 type Database struct {
@@ -123,7 +123,7 @@ func CopyBinary(db string, src string, dst string) (err error) {
 	
 	cmd.Stderr = &stderr
 
-	if err := vos.ExecCommand(cmd); err != nil {
+	if err := vsOs.ExecCommand(cmd); err != nil {
 		return errors.Wrapf(err, "binary copying is failed. Command %s. \n stderr: %s", command, stderr.String())
 	}
 	return err

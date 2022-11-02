@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vilamslep/vspg/cloud/yandex"
-	"github.com/vilamslep/vspg/lib/fs"
-	"github.com/vilamslep/vspg/logger"
-	"github.com/vilamslep/vspg/postgres/pgdump"
-	"github.com/vilamslep/vspg/postgres/psql"
-	"github.com/vilamslep/vspg/render"
+	"github.com/vilamslep/vspg/pkg/cloud/yandex"
+	"github.com/vilamslep/vspg/pkg/fs"
+	"github.com/vilamslep/vspg/pkg/logger"
+	"github.com/vilamslep/vspg/pkg/postgres/pgdump"
+	"github.com/vilamslep/vspg/pkg/postgres/psql"
+	"github.com/vilamslep/vspg/internal/render"
 )
 
 var (

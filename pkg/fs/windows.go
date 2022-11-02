@@ -14,8 +14,8 @@ import (
 	"unsafe"
 
 	"github.com/pkg/errors"
-	"github.com/vilamslep/vspg/lib/config"
-	vos "github.com/vilamslep/vspg/os"
+	"github.com/vilamslep/vspg/internal/config"
+	vsOs "github.com/vilamslep/vspg/pkg/os"
 )
 
 func IsEnoughSpace(src string, dst string, size int64) (bool, error) {
@@ -148,7 +148,7 @@ func Copy(src string, dst string) error {
 
 	cmd.Stderr = &stderr
 
-	if err := vos.ExecCommand(cmd); err != nil {
+	if err := vsOs.ExecCommand(cmd); err != nil {
 		return errors.Wrapf(err, "copying files is failed. Command %s. \n stderr: %s", cmd, stderr.String())
 	}
 	return err

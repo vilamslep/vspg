@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"os/exec"
 
-	v "github.com/vilamslep/vspg/os"
+	v "github.com/vilamslep/vspg/pkg/os"
 )
 
 var (

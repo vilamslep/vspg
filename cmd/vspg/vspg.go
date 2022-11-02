@@ -2,18 +2,17 @@ package main
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/spf13/pflag"
-	"github.com/vilamslep/vspg/lib/backup"
-	"github.com/vilamslep/vspg/lib/config"
-	"github.com/vilamslep/vspg/lib/fs"
-	"github.com/vilamslep/vspg/logger"
-	"github.com/vilamslep/vspg/postgres/pgdump"
-	"github.com/vilamslep/vspg/postgres/psql"
+	"github.com/vilamslep/vspg/internal/backup"
+	"github.com/vilamslep/vspg/internal/config"
+	"github.com/vilamslep/vspg/pkg/fs"
+	"github.com/vilamslep/vspg/pkg/logger"
+	"github.com/vilamslep/vspg/pkg/postgres/pgdump"
+	"github.com/vilamslep/vspg/pkg/postgres/psql"
 )
 
-//cmd args
+//cli args
 var (
 	envfile string
 	settingFile string
@@ -21,10 +20,6 @@ var (
 )
 
 func main() {
-
-	if runtime.GOOS != "windows" {
-		logger.Fatal("application is supported only windows OS.")
-	}
 
 	setAndParseFlags()
 	

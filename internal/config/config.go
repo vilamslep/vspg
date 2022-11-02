@@ -3,8 +3,8 @@ package config
 import (
 	"os"
 
-	"github.com/vilamslep/vspg/notice"
-	"github.com/vilamslep/vspg/notice/email"
+	"github.com/vilamslep/vspg/pkg/notice"
+	"github.com/vilamslep/vspg/pkg/notice/email"
 	"gopkg.in/yaml.v2"
 )
 

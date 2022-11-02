@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vilamslep/vspg/lib/config"
-	"github.com/vilamslep/vspg/logger"
-	"github.com/vilamslep/vspg/notice"
-	"github.com/vilamslep/vspg/notice/email"
-	"github.com/vilamslep/vspg/postgres/psql"
-	"github.com/vilamslep/vspg/render"
+	"github.com/vilamslep/vspg/internal/config"
+	"github.com/vilamslep/vspg/internal/render"
+	"github.com/vilamslep/vspg/pkg/logger"
+	"github.com/vilamslep/vspg/pkg/notice"
+	"github.com/vilamslep/vspg/pkg/notice/email"
+	"github.com/vilamslep/vspg/pkg/postgres/psql"
 )
 
 var (
